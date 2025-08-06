@@ -1,0 +1,5 @@
+dependencies:
+  # Exemplo para Mercado Pago
+  mercadopago_sdk: ^2.0.0
+  # ou para Stripe
+  stripe_payment: ^1.1.4
