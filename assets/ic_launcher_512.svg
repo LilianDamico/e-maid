@@ -1,0 +1,48 @@
+<svg width="512" height="512" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background circle -->
+  <circle cx="256" cy="256" r="240" fill="#00796B" stroke="#004D40" stroke-width="8"/>
+  
+  <!-- House shape -->
+  <path d="M180 320 L180 380 L332 380 L332 320 L380 320 L256 200 L132 320 Z" fill="#FFFFFF" stroke="#E0F2F1" stroke-width="2"/>
+  
+  <!-- Roof -->
+  <path d="M132 320 L256 200 L380 320 L350 320 L256 230 L162 320 Z" fill="#B2DFDB"/>
+  
+  <!-- Door -->
+  <rect x="240" y="340" width="32" height="40" fill="#00695C" rx="2"/>
+  <circle cx="264" cy="360" r="2" fill="#FFFFFF"/>
+  
+  <!-- Windows -->
+  <rect x="200" y="340" width="24" height="24" fill="#4DB6AC" stroke="#00695C" stroke-width="1" rx="2"/>
+  <rect x="288" y="340" width="24" height="24" fill="#4DB6AC" stroke="#00695C" stroke-width="1" rx="2"/>
+  
+  <!-- Window crosses -->
+  <line x1="212" y1="340" x2="212" y2="364" stroke="#00695C" stroke-width="1"/>
+  <line x1="200" y1="352" x2="224" y2="352" stroke="#00695C" stroke-width="1"/>
+  <line x1="300" y1="340" x2="300" y2="364" stroke="#00695C" stroke-width="1"/>
+  <line x1="288" y1="352" x2="312" y2="352" stroke="#00695C" stroke-width="1"/>
+  
+  <!-- Cleaning elements -->
+  <!-- Broom -->
+  <g transform="translate(350,280) rotate(15)">
+    <rect x="0" y="0" width="4" height="60" fill="#8D6E63"/>
+    <path d="M-8 55 L12 55 L8 75 L-4 75 Z" fill="#FFC107"/>
+  </g>
+  
+  <!-- Soap bubbles -->
+  <circle cx="180" cy="260" r="8" fill="#E1F5FE" opacity="0.8"/>
+  <circle cx="200" cy="240" r="6" fill="#E1F5FE" opacity="0.7"/>
+  <circle cx="160" cy="280" r="5" fill="#E1F5FE" opacity="0.6"/>
+  <circle cx="190" cy="280" r="4" fill="#E1F5FE" opacity="0.9"/>
+  
+  <!-- Sparkles -->
+  <g fill="#FFFFFF" opacity="0.8">
+    <path d="M140 200 L144 208 L152 204 L144 212 L140 220 L136 212 L128 204 L136 208 Z"/>
+    <path d="M360 180 L363 186 L369 183 L363 189 L360 195 L357 189 L351 183 L357 186 Z"/>
+    <path d="M120 350 L122 354 L126 352 L122 356 L120 360 L118 356 L114 352 L118 354 Z"/>
+  </g>
+  
+  <!-- App name text -->
+  <text x="256" y="450" font-family="Arial, sans-serif" font-size="36" font-weight="bold" text-anchor="middle" fill="#FFFFFF">E-Maid</text>
+  <text x="256" y="480" font-family="Arial, sans-serif" font-size="16" text-anchor="middle" fill="#B2DFDB">Serviços Domésticos</text>
+</svg>
