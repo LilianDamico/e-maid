@@ -1,3 +1,10 @@
+<<<<<<< HEAD
+dependencies:
+  # Exemplo para Mercado Pago
+  mercadopago_sdk: ^2.0.0
+  # ou para Stripe
+  stripe_payment: ^1.1.4
+=======
 name: e_maid
 description: "E-Maid - Conecte-se com profissionais de limpeza qualificados. Encontre diaristas, faxineiras e serviços de limpeza residencial e comercial de forma rápida e segura."
 
@@ -50,3 +57,4 @@ flutter:
         - asset: assets/fonts/static/Quicksand-Regular.ttf
         - asset: assets/fonts/static/Quicksand-Bold.ttf
           weight: 700
+>>>>>>> 4eaf5a76230d2db2b31e3479bd59d6d4b6745f55
