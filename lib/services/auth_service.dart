@@ -5,13 +5,13 @@ class AuthService {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
-  // Get current user
+  // Usuário atual
   User? get currentUser => _auth.currentUser;
 
-  // Auth state changes stream
+  // Stream de mudanças de autenticação
   Stream<User?> get authStateChanges => _auth.authStateChanges();
 
-  // Sign in with email and password
+  // Login com e-mail e senha
   Future<UserCredential?> signInWithEmailAndPassword({
     required String email,
     required String password,
@@ -27,7 +27,7 @@ class AuthService {
     }
   }
 
-  // Register with email and password
+  // Cadastro de usuário comum
   Future<UserCredential?> registerWithEmailAndPassword({
     required String email,
     required String password,
@@ -41,10 +41,8 @@ class AuthService {
         password: password,
       );
 
-      // Update display name
       await result.user?.updateDisplayName(name);
 
-      // Create user document in Firestore
       await _createUserDocument(
         uid: result.user!.uid,
         email: email,
@@ -59,7 +57,7 @@ class AuthService {
     }
   }
 
-  // Register professional with complete data
+  // Cadastro de profissional
   Future<UserCredential?> registerProfessional({
     required String email,
     required String password,
@@ -78,10 +76,8 @@ class AuthService {
         password: password,
       );
 
-      // Update display name
       await result.user?.updateDisplayName(name);
 
-      // Create professional document in Firestore
       await _createProfessionalDocument(
         uid: result.user!.uid,
         email: email,
@@ -101,7 +97,7 @@ class AuthService {
     }
   }
 
-  // Sign out
+  // Logout
   Future<void> signOut() async {
     try {
       await _auth.signOut();
@@ -110,7 +106,7 @@ class AuthService {
     }
   }
 
-  // Reset password
+  // Resetar senha
   Future<void> resetPassword(String email) async {
     try {
       await _auth.sendPasswordResetEmail(email: email);
@@ -119,7 +115,7 @@ class AuthService {
     }
   }
 
-  // Create user document in Firestore
+  // Criar documento de usuário no Firestore
   Future<void> _createUserDocument({
     required String uid,
     required String email,
@@ -138,7 +134,7 @@ class AuthService {
     });
   }
 
-  // Create professional document in Firestore
+  // Criar documento de profissional no Firestore
   Future<void> _createProfessionalDocument({
     required String uid,
     required String email,
@@ -165,13 +161,13 @@ class AuthService {
       'rating': 0.0,
       'totalRatings': 0,
       'isActive': true,
-      'isVerified': false, // Needs admin approval
+      'isVerified': false,
       'profileImageUrl': '',
       'createdAt': FieldValue.serverTimestamp(),
       'updatedAt': FieldValue.serverTimestamp(),
     });
 
-    // Also create in users collection
+    // Também cria na coleção de usuários
     await _createUserDocument(
       uid: uid,
       email: email,
@@ -181,7 +177,7 @@ class AuthService {
     );
   }
 
-  // Get user data
+  // Buscar dados do usuário
   Future<Map<String, dynamic>?> getUserData(String uid) async {
     try {
       DocumentSnapshot doc = await _firestore.collection('users').doc(uid).get();
@@ -191,7 +187,7 @@ class AuthService {
     }
   }
 
-  // Get professional data
+  // Buscar dados do profissional
   Future<Map<String, dynamic>?> getProfessionalData(String uid) async {
     try {
       DocumentSnapshot doc = await _firestore.collection('professionals').doc(uid).get();
@@ -201,7 +197,27 @@ class AuthService {
     }
   }
 
-  // Handle Firebase Auth exceptions
+  // Exclusão de conta pelo usuário
+  Future<void> deleteAccount() async {
+    final user = _auth.currentUser;
+    if (user == null) throw 'Nenhum usuário autenticado.';
+
+    // Remove dados do Firestore
+    await _firestore.collection('users').doc(user.uid).delete();
+    await _firestore.collection('professionals').doc(user.uid).delete();
+
+    // Exclui conta do Firebase Auth
+    try {
+      await user.delete();
+    } on FirebaseAuthException catch (e) {
+      if (e.code == 'requires-recent-login') {
+        throw 'Reautentique-se para excluir a conta.';
+      }
+      throw _handleAuthException(e);
+    }
+  }
+
+  // Tratamento de erros do Firebase Auth
   String _handleAuthException(FirebaseAuthException e) {
     switch (e.code) {
       case 'user-not-found':
@@ -222,6 +238,3 @@ class AuthService {
         return 'Operação não permitida.';
       default:
         return 'Erro de autenticação: ${e.message}';
-    }
-  }
-}
