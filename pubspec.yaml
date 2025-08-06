@@ -1,5 +1,60 @@
+<<<<<<< HEAD
 dependencies:
   # Exemplo para Mercado Pago
   mercadopago_sdk: ^2.0.0
   # ou para Stripe
   stripe_payment: ^1.1.4
+=======
+name: e_maid
+description: "E-Maid - Conecte-se com profissionais de limpeza qualificados. Encontre diaristas, faxineiras e serviços de limpeza residencial e comercial de forma rápida e segura."
+
+publish_to: 'none'
+
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.8.1
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  cupertino_icons: ^1.0.8
+  
+  # Firebase
+  firebase_core: ^3.6.0
+  firebase_auth: ^5.3.1
+  cloud_firestore: ^5.4.3
+  firebase_storage: ^12.3.2
+  
+  # State Management
+  provider: ^6.1.2
+  
+  # Utils
+  intl: ^0.19.0
+  image_picker: ^1.1.2
+  
+  # Pagamentos
+  http: ^1.1.0
+  url_launcher: ^6.2.1
+  webview_flutter: ^4.4.2
+  crypto: ^3.0.3
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^5.0.0
+
+flutter:
+  uses-material-design: true
+
+  assets:
+    - assets/logo.png
+
+  fonts:
+    - family: Quicksand
+      fonts:
+        - asset: assets/fonts/static/Quicksand-Regular.ttf
+        - asset: assets/fonts/static/Quicksand-Bold.ttf
+          weight: 700
+>>>>>>> 4eaf5a76230d2db2b31e3479bd59d6d4b6745f55

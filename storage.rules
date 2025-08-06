@@ -1,0 +1,38 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    // Profile images - users can only upload/read their own
+    match /profile_images/{userId}/{allPaths=**} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+    
+    // Professional portfolio images
+    match /portfolio/{professionalId}/{allPaths=**} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null && request.auth.uid == professionalId;
+    }
+    
+    // Service images (admin only)
+    match /service_images/{allPaths=**} {
+      allow read: if request.auth != null;
+      allow write: if false; // Only admin via console
+    }
+    
+    // Booking related images (before/after photos)
+    match /booking_images/{bookingId}/{allPaths=**} {
+      allow read, write: if request.auth != null && 
+        (resource.metadata.uploadedBy == request.auth.uid);
+    }
+    
+    // General validation rules
+    function isValidImage() {
+      return request.resource.size < 5 * 1024 * 1024 && // 5MB limit
+             request.resource.contentType.matches('image/.*');
+    }
+    
+    // Apply validation to all uploads
+    match /{allPaths=**} {
+      allow write: if isValidImage();
+    }
+  }
+}

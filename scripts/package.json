@@ -1,0 +1,15 @@
+{
+  "name": "e-maid-firestore-scripts",
+  "version": "1.0.0",
+  "description": "Scripts para configuração inicial do Firestore",
+  "main": "populate_firestore.js",
+  "scripts": {
+    "populate": "node populate_firestore.js",
+    "install-deps": "npm install firebase-admin"
+  },
+  "dependencies": {
+    "firebase-admin": "^11.11.0"
+  },
+  "author": "E-Maid Team",
+  "license": "MIT"
+}

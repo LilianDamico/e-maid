@@ -1,0 +1,111 @@
+<svg width="1024" height="500" viewBox="0 0 1024 500" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background gradient -->
+  <defs>
+    <linearGradient id="bgGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#00796B;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#004D40;stop-opacity:1" />
+    </linearGradient>
+    <radialGradient id="glowGradient" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" style="stop-color:#FFFFFF;stop-opacity:0.3" />
+      <stop offset="100%" style="stop-color:#FFFFFF;stop-opacity:0" />
+    </radialGradient>
+  </defs>
+  
+  <rect width="1024" height="500" fill="url(#bgGradient)"/>
+  <rect width="1024" height="500" fill="url(#glowGradient)"/>
+  
+  <!-- Main content area -->
+  <g>
+    <!-- Left side - App icon and title -->
+    <g transform="translate(80,100)">
+      <!-- App icon background -->
+      <circle cx="100" cy="100" r="80" fill="#FFFFFF" opacity="0.95"/>
+      
+      <!-- House icon -->
+      <g transform="translate(100,100)">
+        <!-- House shape -->
+        <path d="M-40 20 L-40 60 L40 60 L40 20 L60 20 L0 -40 L-60 20 Z" fill="#00796B"/>
+        
+        <!-- Roof -->
+        <path d="M-60 20 L0 -40 L60 20 L45 20 L0 -25 L-45 20 Z" fill="#004D40"/>
+        
+        <!-- Door -->
+        <rect x="-8" y="30" width="16" height="30" fill="#FFFFFF" rx="1"/>
+        <circle cx="4" cy="45" r="1.5" fill="#00796B"/>
+        
+        <!-- Windows -->
+        <rect x="-30" y="30" width="12" height="12" fill="#4DB6AC" stroke="#00796B" stroke-width="0.5" rx="1"/>
+        <rect x="18" y="30" width="12" height="12" fill="#4DB6AC" stroke="#00796B" stroke-width="0.5" rx="1"/>
+        
+        <!-- Window crosses -->
+        <line x1="-24" y1="30" x2="-24" y2="42" stroke="#00796B" stroke-width="0.5"/>
+        <line x1="-30" y1="36" x2="-18" y2="36" stroke="#00796B" stroke-width="0.5"/>
+        <line x1="24" y1="30" x2="24" y2="42" stroke="#00796B" stroke-width="0.5"/>
+        <line x1="18" y1="36" x2="30" y2="36" stroke="#00796B" stroke-width="0.5"/>
+      </g>
+      
+      <!-- Cleaning elements around icon -->
+      <!-- Broom -->
+      <g transform="translate(160,60) rotate(15)">
+        <rect x="0" y="0" width="3" height="40" fill="#8D6E63"/>
+        <path d="M-6 35 L9 35 L6 50 L-3 50 Z" fill="#FFC107"/>
+      </g>
+      
+      <!-- Soap bubbles -->
+      <circle cx="40" cy="60" r="6" fill="#E1F5FE" opacity="0.8"/>
+      <circle cx="55" cy="45" r="4" fill="#E1F5FE" opacity="0.7"/>
+      <circle cx="25" cy="75" r="3" fill="#E1F5FE" opacity="0.6"/>
+      <circle cx="50" cy="80" r="2" fill="#E1F5FE" opacity="0.9"/>
+      
+      <!-- App title -->
+      <text x="100" y="240" font-family="Arial, sans-serif" font-size="48" font-weight="bold" text-anchor="middle" fill="#FFFFFF">E-Maid</text>
+      <text x="100" y="270" font-family="Arial, sans-serif" font-size="20" text-anchor="middle" fill="#B2DFDB">Serviços Domésticos de Qualidade</text>
+    </g>
+    
+    <!-- Right side - Features and benefits -->
+    <g transform="translate(400,80)">
+      <!-- Main headline -->
+      <text x="0" y="0" font-family="Arial, sans-serif" font-size="42" font-weight="bold" fill="#FFFFFF">Conecte-se com</text>
+      <text x="0" y="50" font-family="Arial, sans-serif" font-size="42" font-weight="bold" fill="#FFFFFF">Profissionais Qualificados</text>
+      
+      <!-- Subheadline -->
+      <text x="0" y="100" font-family="Arial, sans-serif" font-size="24" fill="#B2DFDB">Limpeza e organização da sua casa</text>
+      <text x="0" y="130" font-family="Arial, sans-serif" font-size="24" fill="#B2DFDB">com segurança e praticidade</text>
+      
+      <!-- Features list -->
+      <g transform="translate(0,180)">
+        <!-- Feature 1 -->
+        <circle cx="10" cy="0" r="8" fill="#4DB6AC"/>
+        <path d="M6 -2 L8 0 L14 -6" stroke="#FFFFFF" stroke-width="2" fill="none"/>
+        <text x="30" y="5" font-family="Arial, sans-serif" font-size="18" fill="#FFFFFF">Profissionais verificados</text>
+        
+        <!-- Feature 2 -->
+        <circle cx="10" cy="40" r="8" fill="#4DB6AC"/>
+        <path d="M6 38 L8 40 L14 34" stroke="#FFFFFF" stroke-width="2" fill="none"/>
+        <text x="30" y="45" font-family="Arial, sans-serif" font-size="18" fill="#FFFFFF">Agendamento fácil</text>
+        
+        <!-- Feature 3 -->
+        <circle cx="10" cy="80" r="8" fill="#4DB6AC"/>
+        <path d="M6 78 L8 80 L14 74" stroke="#FFFFFF" stroke-width="2" fill="none"/>
+        <text x="30" y="85" font-family="Arial, sans-serif" font-size="18" fill="#FFFFFF">Pagamento seguro</text>
+        
+        <!-- Feature 4 -->
+        <circle cx="10" cy="120" r="8" fill="#4DB6AC"/>
+        <path d="M6 118 L8 120 L14 114" stroke="#FFFFFF" stroke-width="2" fill="none"/>
+        <text x="30" y="125" font-family="Arial, sans-serif" font-size="18" fill="#FFFFFF">Avaliações transparentes</text>
+      </g>
+    </g>
+    
+    <!-- Decorative elements -->
+    <!-- Sparkles -->
+    <g fill="#FFFFFF" opacity="0.6">
+      <path d="M200 50 L204 58 L212 54 L204 62 L200 70 L196 62 L188 54 L196 58 Z"/>
+      <path d="M800 100 L803 106 L809 103 L803 109 L800 115 L797 109 L791 103 L797 106 Z"/>
+      <path d="M900 300 L902 304 L906 302 L902 306 L900 310 L898 306 L894 302 L898 304 Z"/>
+      <path d="M150 350 L152 354 L156 352 L152 356 L150 360 L148 356 L144 352 L148 354 Z"/>
+    </g>
+    
+    <!-- Bottom call to action -->
+    <text x="512" y="450" font-family="Arial, sans-serif" font-size="20" font-weight="bold" text-anchor="middle" fill="#FFFFFF">Baixe agora e transforme a limpeza da sua casa!</text>
+  </g>
+</svg>
