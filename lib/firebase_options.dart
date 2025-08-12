@@ -41,20 +41,21 @@ class DefaultFirebaseOptions {
   }
 
   static const FirebaseOptions web = FirebaseOptions(
-    apiKey: 'AIzaSyBvOiCC40yIsar3pFm-0bXBZK9T_-a6LkM',
-    appId: '1:847291063847:web:c8f4d2e1a9b3f5e7d4c2a1',
-    messagingSenderId: '847291063847',
-    projectId: 'e-maid-production',
-    authDomain: 'e-maid-production.firebaseapp.com',
-    storageBucket: 'e-maid-production.appspot.com',
+    apiKey: 'AIzaSyAN6M9SUSfxtbtV-8DuLilL60bvpxM6Qd0',
+    appId: '1:1021594532905:web:44f42bee5a7c6f4be83038',
+    messagingSenderId: '1021594532905',
+    projectId: 'e-maid-app',
+    authDomain: 'e-maid-app.firebaseapp.com',
+    storageBucket: 'e-maid-app.firebasestorage.app',
+    measurementId: 'G-9S0XWNFZ2X',
   );
 
   static const FirebaseOptions android = FirebaseOptions(
-    apiKey: 'AIzaSyBvOiCC40yIsar3pFm-0bXBZK9T_-a6LkM',
-    appId: '1:847291063847:android:c8f4d2e1a9b3f5e7d4c2a1',
-    messagingSenderId: '847291063847',
-    projectId: 'e-maid-production',
-    storageBucket: 'e-maid-production.appspot.com',
+    apiKey: 'AIzaSyC8MzY6kMPOuGY0xvb2tsC3v-p545DY2Do',
+    appId: '1:1021594532905:android:bc1b73245925c5f6e83038',
+    messagingSenderId: '1021594532905',
+    projectId: 'e-maid-app',
+    storageBucket: 'e-maid-app.firebasestorage.app',
   );
 
   static const FirebaseOptions ios = FirebaseOptions(

@@ -1,33 +1,33 @@
 {
   "project_info": {
-    "project_number": "847291063847",
-    "project_id": "e-maid-production",
-    "storage_bucket": "e-maid-production.appspot.com"
+    "project_number": "1021594532905",
+    "project_id": "e-maid-app",
+    "storage_bucket": "e-maid-app.firebasestorage.app"
   },
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:847291063847:android:c8f4d2e1a9b3f5e7d4c2a1",
+        "mobilesdk_app_id": "1:1021594532905:android:bc1b73245925c5f6e83038",
         "android_client_info": {
           "package_name": "com.emaid.app"
         }
       },
       "oauth_client": [
         {
-          "client_id": "847291063847-abc123def456ghi789jkl012mno345pqr.apps.googleusercontent.com",
+          "client_id": "1021594532905-lj12q3nlqr5dipei09mt6esjjeev1mc7.apps.googleusercontent.com",
           "client_type": 3
         }
       ],
       "api_key": [
         {
-          "current_key": "AIzaSyBvOiCC40yIsar3pFm-0bXBZK9T_-a6LkM"
+          "current_key": "AIzaSyC8MzY6kMPOuGY0xvb2tsC3v-p545DY2Do"
         }
       ],
       "services": {
         "appinvite_service": {
           "other_platform_oauth_client": [
             {
-              "client_id": "847291063847-abc123def456ghi789jkl012mno345pqr.apps.googleusercontent.com",
+              "client_id": "1021594532905-lj12q3nlqr5dipei09mt6esjjeev1mc7.apps.googleusercontent.com",
               "client_type": 3
             }
           ]

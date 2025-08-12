@@ -17,7 +17,7 @@ class AuthService {
     required String password,
   }) async {
     try {
-      UserCredential result = await _auth.signInWithEmailAndPassword(
+      final result = await _auth.signInWithEmailAndPassword(
         email: email,
         password: password,
       );
@@ -36,7 +36,7 @@ class AuthService {
     required String userType,
   }) async {
     try {
-      UserCredential result = await _auth.createUserWithEmailAndPassword(
+      final result = await _auth.createUserWithEmailAndPassword(
         email: email,
         password: password,
       );
@@ -71,7 +71,7 @@ class AuthService {
     required List<String> specialties,
   }) async {
     try {
-      UserCredential result = await _auth.createUserWithEmailAndPassword(
+      final result = await _auth.createUserWithEmailAndPassword(
         email: email,
         password: password,
       );
@@ -180,7 +180,7 @@ class AuthService {
   // Buscar dados do usuário
   Future<Map<String, dynamic>?> getUserData(String uid) async {
     try {
-      DocumentSnapshot doc = await _firestore.collection('users').doc(uid).get();
+      final doc = await _firestore.collection('users').doc(uid).get();
       return doc.data() as Map<String, dynamic>?;
     } catch (e) {
       throw 'Erro ao buscar dados do usuário: $e';
@@ -190,7 +190,7 @@ class AuthService {
   // Buscar dados do profissional
   Future<Map<String, dynamic>?> getProfessionalData(String uid) async {
     try {
-      DocumentSnapshot doc = await _firestore.collection('professionals').doc(uid).get();
+      final doc = await _firestore.collection('professionals').doc(uid).get();
       return doc.data() as Map<String, dynamic>?;
     } catch (e) {
       throw 'Erro ao buscar dados do profissional: $e';
@@ -202,9 +202,13 @@ class AuthService {
     final user = _auth.currentUser;
     if (user == null) throw 'Nenhum usuário autenticado.';
 
-    // Remove dados do Firestore
-    await _firestore.collection('users').doc(user.uid).delete();
-    await _firestore.collection('professionals').doc(user.uid).delete();
+    // Remove dados do Firestore (ignorando se algum dos docs não existir)
+    try {
+      await _firestore.collection('users').doc(user.uid).delete();
+    } catch (_) {}
+    try {
+      await _firestore.collection('professionals').doc(user.uid).delete();
+    } catch (_) {}
 
     // Exclui conta do Firebase Auth
     try {
@@ -238,3 +242,6 @@ class AuthService {
         return 'Operação não permitida.';
       default:
         return 'Erro de autenticação: ${e.message}';
+    }
+  }
+}

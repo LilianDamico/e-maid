@@ -1,10 +1,12 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:webview_flutter/webview_flutter.dart';
+import '../../config/api_config.dart';
 
 class PaymentWebViewScreen extends StatefulWidget {
-  final String checkoutUrl;
+  final String checkoutUrl;              // <— nome que seu código usa
   final Map<String, dynamic> bookingData;
-  
+
   const PaymentWebViewScreen({
     super.key,
     required this.checkoutUrl,
@@ -17,133 +19,43 @@ class PaymentWebViewScreen extends StatefulWidget {
 
 class _PaymentWebViewScreenState extends State<PaymentWebViewScreen> {
   late final WebViewController _controller;
-  bool _isLoading = true;
 
   @override
   void initState() {
     super.initState();
-    _initializeWebView();
-  }
+    if (Platform.isAndroid) WebViewPlatform.instance;
 
-  void _initializeWebView() {
     _controller = WebViewController()
-      ..setJavaScriptMode(JavaScriptMode.unrestricted)
       ..setNavigationDelegate(
         NavigationDelegate(
-          onPageStarted: (String url) {
-            setState(() => _isLoading = true);
-          },
-          onPageFinished: (String url) {
-            setState(() => _isLoading = false);
-          },
-          onNavigationRequest: (NavigationRequest request) {
-            // Interceptar URLs de retorno
-            if (request.url.startsWith('emaid://payment/')) {
-              _handlePaymentResult(request.url);
+          onNavigationRequest: (request) {
+            final url = request.url;
+
+            if (url.startsWith(ReturnUrls.success)) {
+              Navigator.pop(context, 'success');
+              return NavigationDecision.prevent;
+            }
+            if (url.startsWith(ReturnUrls.failure)) {
+              Navigator.pop(context, 'failure');
+              return NavigationDecision.prevent;
+            }
+            if (url.startsWith(ReturnUrls.pending)) {
+              Navigator.pop(context, 'pending');
               return NavigationDecision.prevent;
             }
             return NavigationDecision.navigate;
           },
         ),
       )
+      ..setJavaScriptMode(JavaScriptMode.unrestricted)
       ..loadRequest(Uri.parse(widget.checkoutUrl));
-  }
-
-  void _handlePaymentResult(String url) {
-    String status = '';
-    if (url.contains('success')) {
-      status = 'success';
-    } else if (url.contains('failure')) {
-      status = 'failure';
-    } else if (url.contains('pending')) {
-      status = 'pending';
-    }
-
-    Navigator.of(context).pop();
-    
-    switch (status) {
-      case 'success':
-        _showSuccessDialog();
-        break;
-      case 'failure':
-        _showFailureDialog();
-        break;
-      case 'pending':
-        _showPendingDialog();
-        break;
-    }
-  }
-
-  void _showSuccessDialog() {
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) => AlertDialog(
-        title: const Text('Pagamento Aprovado!'),
-        content: const Text('Seu pagamento foi processado com sucesso.'),
-        actions: [
-          ElevatedButton(
-            onPressed: () {
-              Navigator.of(context).popUntil((route) => route.isFirst);
-            },
-            child: const Text('OK'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _showFailureDialog() {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Pagamento Recusado'),
-        content: const Text('Não foi possível processar seu pagamento. Tente novamente.'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('OK'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _showPendingDialog() {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Pagamento Pendente'),
-        content: const Text('Seu pagamento está sendo processado. Você receberá uma confirmação em breve.'),
-        actions: [
-          ElevatedButton(
-            onPressed: () {
-              Navigator.of(context).popUntil((route) => route.isFirst);
-            },
-            child: const Text('OK'),
-          ),
-        ],
-      ),
-    );
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Pagamento'),
-        backgroundColor: Colors.teal,
-        foregroundColor: Colors.white,
-      ),
-      body: Stack(
-        children: [
-          WebViewWidget(controller: _controller),
-          if (_isLoading)
-            const Center(
-              child: CircularProgressIndicator(),
-            ),
-        ],
-      ),
+      appBar: AppBar(title: const Text('Pagamento')),
+      body: WebViewWidget(controller: _controller),
     );
   }
 }

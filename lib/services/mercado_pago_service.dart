@@ -1,120 +1,87 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
-import 'package:crypto/crypto.dart';
+import '../config/api_config.dart';
 
 class MercadoPagoService {
-  static const String _baseUrl = 'https://api.mercadopago.com';
-  // IMPORTANTE: Substitua pelo seu token real do Mercado Pago
-  // Para testes, use o token de sandbox
-  static const String _accessToken = 'TEST-SEU_TOKEN_AQUI'; // Para sandbox
-  // static const String _accessToken = 'APP_USR-SEU_TOKEN_AQUI'; // Para produção
-
-  // Criar preferência de pagamento
+  /// Cria preferência (Checkout Pro) e retorna o JSON do backend
+  /// Esperado: { id, init_point, ... }
   Future<Map<String, dynamic>> createPaymentPreference({
     required String title,
     required double amount,
     required String userEmail,
     required String bookingId,
+    Map<String, dynamic>? metadata,
   }) async {
-    final url = Uri.parse('$_baseUrl/checkout/preferences');
+    final uri = Uri.parse(ApiConfig.createPreference);
 
-    final body = {
-      'items': [
-        {
-          'title': title,
-          'quantity': 1,
-          'unit_price': amount,
-          'currency_id': 'BRL',
-        },
-      ],
-      'payer': {'email': userEmail},
-      'external_reference': bookingId,
-      // Substitua pelas suas URLs reais
-      'notification_url': 'https://sua-api.com/webhook/mercadopago',
-      'back_urls': {
-        'success': 'emaid://payment/success',
-        'failure': 'emaid://payment/failure',
-        'pending': 'emaid://payment/pending',
+    final payload = {
+      'amount': amount,
+      'description': title,
+      'payer_email': userEmail,
+      'metadata': {
+        'bookingId': bookingId,
+        ...?metadata,
       },
-      'auto_return': 'approved',
-      'payment_methods': {'excluded_payment_types': [], 'installments': 12},
+      // ajudamos o backend a popular os back_urls
+      'return_urls': {
+        'success': ReturnUrls.success,
+        'failure': ReturnUrls.failure,
+        'pending': ReturnUrls.pending,
+      },
     };
 
-    try {
-      final response = await http.post(
-        url,
-        headers: {
-          'Authorization': 'Bearer $_accessToken',
-          'Content-Type': 'application/json',
-        },
-        body: json.encode(body),
-      );
+    final resp = await http.post(
+      uri,
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode(payload),
+    );
 
-      if (response.statusCode == 201) {
-        return json.decode(response.body);
-      } else {
-        throw Exception('Erro ao criar preferência: ${response.body}');
+    if (resp.statusCode >= 200 && resp.statusCode < 300) {
+      final data = jsonDecode(resp.body) as Map<String, dynamic>;
+      if ((data['init_point'] ?? data['sandbox_init_point']) == null) {
+        throw Exception('Resposta sem init_point: ${resp.body}');
       }
-    } catch (e) {
-      throw Exception('Erro de conexão: $e');
+      return data;
+    } else {
+      throw Exception('Falha ao criar preferência (${resp.statusCode}): ${resp.body}');
     }
   }
 
-  // Verificar status do pagamento
-  Future<Map<String, dynamic>> getPaymentStatus(String paymentId) async {
-    final url = Uri.parse('$_baseUrl/v1/payments/$paymentId');
-
-    try {
-      final response = await http.get(
-        url,
-        headers: {'Authorization': 'Bearer $_accessToken'},
-      );
-
-      if (response.statusCode == 200) {
-        return json.decode(response.body);
-      } else {
-        throw Exception('Erro ao verificar pagamento: ${response.body}');
-      }
-    } catch (e) {
-      throw Exception('Erro de conexão: $e');
-    }
-  }
-
-  // Criar pagamento PIX
+  /// Cria cobrança PIX no backend
+  /// Esperado: { qr_code, qr_code_base64, payment_id, ... }
   Future<Map<String, dynamic>> createPixPayment({
     required double amount,
     required String userEmail,
     required String bookingId,
     required String description,
+    Map<String, dynamic>? metadata,
   }) async {
-    final url = Uri.parse('$_baseUrl/v1/payments');
+    final uri = Uri.parse(ApiConfig.createPix);
 
-    final body = {
-      'transaction_amount': amount,
+    final payload = {
+      'amount': amount,
       'description': description,
-      'payment_method_id': 'pix',
-      'payer': {'email': userEmail},
-      'external_reference': bookingId,
-      'notification_url': 'https://seu-webhook-url.com/webhook',
+      'payer_email': userEmail,
+      'metadata': {
+        'bookingId': bookingId,
+        ...?metadata,
+      },
     };
 
-    try {
-      final response = await http.post(
-        url,
-        headers: {
-          'Authorization': 'Bearer $_accessToken',
-          'Content-Type': 'application/json',
-        },
-        body: json.encode(body),
-      );
+    final resp = await http.post(
+      uri,
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode(payload),
+    );
 
-      if (response.statusCode == 201) {
-        return json.decode(response.body);
-      } else {
-        throw Exception('Erro ao criar PIX: ${response.body}');
+    if (resp.statusCode >= 200 && resp.statusCode < 300) {
+      final data = jsonDecode(resp.body) as Map<String, dynamic>;
+      if (data['qr_code'] == null) {
+        throw Exception('Resposta PIX inválida: ${resp.body}');
       }
-    } catch (e) {
-      throw Exception('Erro de conexão: $e');
+      return data;
+    } else {
+      throw Exception('Falha ao criar PIX (${resp.statusCode}): ${resp.body}');
     }
   }
 }
