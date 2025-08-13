@@ -1,59 +1,99 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import '../routes/app_routes.dart';
+import '../services/auth_service.dart'; // usa seu AuthService
 
-class SplashScreen extends StatelessWidget {
+class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
 
   @override
+  State<SplashScreen> createState() => _SplashScreenState();
+}
+
+class _SplashScreenState extends State<SplashScreen>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller;
+  late final Animation<double> _scale;
+  late final Animation<double> _fade;
+
+  @override
+  void initState() {
+    super.initState();
+
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 700),
+    );
+
+    _scale = Tween<double>(begin: 0.92, end: 1.0)
+        .chain(CurveTween(curve: Curves.easeOutBack))
+        .animate(_controller);
+
+    _fade = Tween<double>(begin: 0.0, end: 1.0)
+        .chain(CurveTween(curve: Curves.easeOut))
+        .animate(_controller);
+
+    _controller.forward();
+
+    // pequeno delay p/ a animação acontecer
+    Timer(const Duration(milliseconds: 1200), _decideNext);
+  }
+
+  Future<void> _decideNext() async {
+    final user = AuthService().currentUser; // seu getter
+    if (!mounted) return;
+
+    if (user != null) {
+      Navigator.pushReplacementNamed(context, AppRoutes.home);
+    } else {
+      Navigator.pushReplacementNamed(context, AppRoutes.login);
+    }
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
+    // fundo simples; troque por gradient se quiser
     return Scaffold(
+      backgroundColor: const Color(0xFFF4F7F7),
       body: Center(
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 32.0),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: <Widget>[
-              Image.asset('assets/logo.png', width: 160),
-              const SizedBox(height: 32),
-              const Text(
-                'Bem-vindo ao E-Maid',
-                style: TextStyle(
-                  fontSize: 24,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.black87,
-                ),
-              ),
-              const SizedBox(height: 16),
-              const Text(
-                'Conectando você a profissionais da limpeza de forma prática e segura.',
-                textAlign: TextAlign.center,
-                style: TextStyle(fontSize: 16, color: Colors.black54),
-              ),
-              const SizedBox(height: 40),
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: () {
-                    Navigator.pushNamed(context, AppRoutes.login);
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.teal,
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
-                  child: const Text(
-                    'Começar',
+          padding: const EdgeInsets.symmetric(horizontal: 32),
+          child: FadeTransition(
+            opacity: _fade,
+            child: ScaleTransition(
+              scale: _scale,
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  // logo
+                  Image.asset('assets/logo.png', width: 160),
+                  const SizedBox(height: 24),
+                  
+                  const SizedBox(height: 12),
+                  const Text(
+                    'Conectando você a profissionais de limpeza\nde forma prática e segura.',
+                    textAlign: TextAlign.center,
                     style: TextStyle(
-                      fontSize: 18,
-                      color: Colors.white,
-                      fontWeight: FontWeight.w600,
+                      fontSize: 14.5,
+                      color: Colors.black54,
+                      height: 1.25,
                     ),
                   ),
-                ),
+                  const SizedBox(height: 28),
+                  const SizedBox(
+                    width: 28,
+                    height: 28,
+                    child: CircularProgressIndicator(strokeWidth: 2.6),
+                  ),
+                ],
               ),
-            ],
+            ),
           ),
         ),
       ),

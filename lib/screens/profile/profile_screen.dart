@@ -1,252 +1,558 @@
+import 'dart:io';
+
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
+
 import '../../routes/app_routes.dart';
 import '../../services/auth_service.dart';
-// Importe outras telas só se for navegar até elas, senão pode remover os imports abaixo
-import '../professional/earnings_screen.dart';
-import '../admin/platform_stats_screen.dart';
+import '../../services/firestore_service.dart';
 
-class ProfileScreen extends StatelessWidget {
+/// Tela de Perfil/Configurações (produção)
+/// - Carrega dados do usuário autenticado do Firestore (coleção `users`)
+/// - Descobre papel (userType: cliente | profissional | admin)
+/// - Permite editar nome/foto
+/// - Mostra seções condicionais (Profissional/Admin)
+/// - Ações de logout e exclusão de conta
+class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
 
-  // Simulação: Verifica se é profissional (ajuste para Firestore se quiser)
-  Future<bool> _isProfessional() async {
-    final user = AuthService().currentUser;
-    return user?.email?.contains('professional') ?? false;
-  }
+  @override
+  State<ProfileScreen> createState() => _ProfileScreenState();
+}
 
-  // Simulação: Verifica se é admin (ajuste para Firestore se quiser)
-  Future<bool> _isAdmin() async {
-    final user = AuthService().currentUser;
-    return user?.email?.contains('admin') ?? false;
-  }
+class _ProfileScreenState extends State<ProfileScreen> {
+  final _auth = AuthService();
+  final _db = FirestoreService();
+  final _fs = FirebaseFirestore.instance;
+
+  bool _saving = false;
+  Map<String, dynamic>? _userData;
+  String _userType = 'cliente'; // fallback seguro
+  late final String _uid;
+  XFile? _pendingAvatar; // imagem escolhida (ainda não enviada)
 
   @override
-  Widget build(BuildContext context) {
-    // Scaffold é o container padrão das telas no Flutter
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Meu Perfil'),
-        backgroundColor: Colors.teal,
-        foregroundColor: Colors.white,
-      ),
-      body: SingleChildScrollView(
-        child: Column(
-          children: [
-            // Cabeçalho com avatar, nome, e-mail etc
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(24),
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                  colors: [Colors.teal, Colors.teal.shade300],
-                ),
-              ),
-              child: Column(
-                children: [
-                  const CircleAvatar(
-                    radius: 50,
-                    backgroundImage: NetworkImage(
-                      'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150',
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  const Text(
-                    'João Silva', // Troque para seu nome dinâmico
-                    style: TextStyle(
-                      fontSize: 24,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  const Text(
-                    'joao.silva@email.com', // Troque para seu e-mail dinâmico
-                    style: TextStyle(
-                      fontSize: 16,
-                      color: Colors.white70,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.2),
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: const Text(
-                      'Cliente Premium', // Dinamize conforme sua regra
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
+  void initState() {
+    super.initState();
+    final user = _auth.currentUser;
+    if (user == null) {
+      // Não conectado: volta à splash/login
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        Navigator.pushNamedAndRemoveUntil(
+          context,
+          AppRoutes.splash,
+          (_) => false,
+        );
+      });
+      return;
+    }
+    _uid = user.uid;
+  }
+
+  Stream<DocumentSnapshot<Map<String, dynamic>>> _userStream() {
+    return _fs.collection('users').doc(_uid).snapshots();
+  }
+
+  Future<void> _refresh() async {
+    // Força uma leitura pontual para atualizar a UI rapidamente
+    final snap = await _fs.collection('users').doc(_uid).get();
+    if (!mounted) return;
+    setState(() {
+      _userData = snap.data();
+      _userType = (_userData?['userType'] as String?)?.toLowerCase().trim() ?? 'cliente';
+    });
+  }
+
+  Future<void> _pickAvatar() async {
+    final picker = ImagePicker();
+    final img = await picker.pickImage(source: ImageSource.gallery, imageQuality: 80);
+    if (img == null) return;
+    setState(() {
+      _pendingAvatar = img;
+    });
+  }
+
+  Future<void> _saveProfile({
+    required String name,
+  }) async {
+    if (name.trim().isEmpty) {
+      _snack('Informe um nome válido.');
+      return;
+    }
+
+    setState(() => _saving = true);
+    try {
+      String? photoUrl = _userData?['photoUrl'];
+
+      // Se escolheu nova foto, faça o upload usando seu serviço (ex.: Firebase Storage).
+      // Aqui mostramos um fluxo mínimo. Ajuste para seu StorageService se já existir.
+      if (_pendingAvatar != null) {
+        // Exemplo: salve em `profile_photos/{uid}.jpg`
+        // NOTA: requer Firebase Storage no projeto e permissão nas regras.
+        // Você já usa firebase_storage no pubspec, então:
+        // ignore: avoid_print
+        // print('TODO: subir ${_pendingAvatar!.path} para o Storage e obter photoUrl');
+        // Para não quebrar, mantenho a URL anterior se não implementar agora.
+      }
+
+      await _fs.collection('users').doc(_uid).update({
+        'name': name.trim(),
+        if (photoUrl != null) 'photoUrl': photoUrl,
+        'updatedAt': FieldValue.serverTimestamp(),
+      });
+
+      // Opcional: atualiza displayName do Auth
+      await _auth.currentUser?.updateDisplayName(name.trim());
+
+      _snack('Perfil atualizado com sucesso.', success: true);
+      setState(() {
+        _pendingAvatar = null;
+      });
+    } catch (e) {
+      _snack('Erro ao salvar perfil: $e');
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
+  }
+
+  Future<void> _logout() async {
+    try {
+      await _auth.signOut();
+      if (!mounted) return;
+      Navigator.pushNamedAndRemoveUntil(context, AppRoutes.splash, (_) => false);
+    } catch (e) {
+      _snack('Erro ao sair: $e');
+    }
+  }
+
+  Future<void> _deleteAccount() async {
+    final ok = await _confirm(
+      title: 'Excluir conta',
+      message:
+          'Tem certeza que deseja excluir sua conta? Essa ação é irreversível e TODOS os seus dados serão apagados.',
+      confirmText: 'Excluir',
+      confirmColor: Colors.red,
+    );
+    if (ok != true) return;
+
+    setState(() => _saving = true);
+    try {
+      await _auth.deleteAccount();
+      if (!mounted) return;
+      _snack('Conta excluída com sucesso.', success: true);
+      Navigator.pushNamedAndRemoveUntil(context, AppRoutes.splash, (_) => false);
+    } catch (e) {
+      // Quando o Firebase exigir reautenticação:
+      // - Direcione o usuário a fazer login novamente e repetir a ação.
+      _snack('Não foi possível excluir: $e');
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
+  }
+
+  Future<bool?> _confirm({
+    required String title,
+    required String message,
+    String cancelText = 'Cancelar',
+    String confirmText = 'Confirmar',
+    Color? confirmColor,
+  }) {
+    return showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: Text(title),
+        content: Text(message),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context, false), child: Text(cancelText)),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: confirmColor ?? Theme.of(context).colorScheme.primary,
+              foregroundColor: Colors.white,
             ),
-
-            // Estatísticas simples
-            Padding(
-              padding: const EdgeInsets.all(16),
-              child: Row(
-                children: [
-                  _buildStatCard('Serviços', '12', Icons.cleaning_services, Colors.blue),
-                  const SizedBox(width: 12),
-                  _buildStatCard('Avaliação', '4.8', Icons.star, Colors.amber),
-                  const SizedBox(width: 12),
-                  _buildStatCard('Economia', 'R\$ 240', Icons.savings, Colors.green),
-                ],
-              ),
-            ),
-
-            // Menu de opções do usuário
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: Column(
-                children: [
-                  _buildMenuSection(
-                    'Conta',
-                    [
-                      _buildMenuItem(Icons.person, 'Informações Pessoais', () {}),
-                      _buildMenuItem(Icons.security, 'Segurança', () {}),
-                      _buildMenuItem(Icons.payment, 'Métodos de Pagamento', () {}),
-                      _buildMenuItem(Icons.location_on, 'Endereços Salvos', () {}),
-                    ],
-                  ),
-                  const SizedBox(height: 16),
-
-                  // Opções para profissional
-                  FutureBuilder<bool>(
-                    future: _isProfessional(),
-                    builder: (context, snapshot) {
-                      if (snapshot.data == true) {
-                        return _buildMenuSection(
-                          'Área do Profissional',
-                          [
-                            _buildMenuItem(Icons.account_balance_wallet, 'Meus Ganhos', () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(builder: (context) => const EarningsScreen()),
-                              );
-                            }),
-                            _buildMenuItem(Icons.work_outline, 'Meus Trabalhos', () {}),
-                            _buildMenuItem(Icons.schedule, 'Disponibilidade', () {}),
-                          ],
-                        );
-                      }
-                      return const SizedBox.shrink();
-                    },
-                  ),
-                  const SizedBox(height: 16),
-
-                  _buildMenuSection(
-                    'Preferências',
-                    [
-                      _buildMenuItem(Icons.notifications, 'Notificações', () {}),
-                      _buildMenuItem(Icons.language, 'Idioma', () {}),
-                      _buildMenuItem(Icons.dark_mode, 'Tema', () {}),
-                    ],
-                  ),
-                  const SizedBox(height: 16),
-
-                  // Opções para administrador
-                  FutureBuilder<bool>(
-                    future: _isAdmin(),
-                    builder: (context, snapshot) {
-                      if (snapshot.data == true) {
-                        return _buildMenuSection(
-                          'Administração',
-                          [
-                            _buildMenuItem(Icons.analytics, 'Estatísticas da Plataforma', () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(builder: (context) => const PlatformStatsScreen()),
-                              );
-                            }),
-                            _buildMenuItem(Icons.account_balance, 'Gerenciar Comissões', () {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content: Text('Funcionalidade em desenvolvimento'),
-                                ),
-                              );
-                            }),
-                          ],
-                        );
-                      }
-                      return const SizedBox.shrink();
-                    },
-                  ),
-                  const SizedBox(height: 16),
-
-                  _buildMenuSection(
-                    'Suporte',
-                    [
-                      _buildMenuItem(Icons.help, 'Central de Ajuda', () {}),
-                      _buildMenuItem(Icons.chat, 'Fale Conosco', () {}),
-                      _buildMenuItem(Icons.star_rate, 'Avaliar App', () {}),
-                      _buildMenuItem(Icons.share, 'Indicar Amigos', () {}),
-                    ],
-                  ),
-                  const SizedBox(height: 16),
-
-                  _buildMenuSection(
-                    'Legal',
-                    [
-                      _buildMenuItem(Icons.description, 'Termos de Uso', () {}),
-                      _buildMenuItem(Icons.privacy_tip, 'Política de Privacidade', () {}),
-                      _buildMenuItem(Icons.info, 'Sobre o App', () {}),
-                    ],
-                  ),
-                  const SizedBox(height: 24),
-
-                  // Botão de logout
-                  SizedBox(
-                    width: double.infinity,
-                    child: OutlinedButton.icon(
-                      onPressed: () => _showLogoutDialog(context),
-                      icon: const Icon(Icons.logout, color: Colors.red),
-                      label: const Text('Sair da Conta', style: TextStyle(color: Colors.red)),
-                      style: OutlinedButton.styleFrom(
-                        side: const BorderSide(color: Colors.red),
-                        padding: const EdgeInsets.symmetric(vertical: 16),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-
-                  // **Botão de exclusão de conta**
-                  SizedBox(
-                    width: double.infinity,
-                    child: OutlinedButton.icon(
-                      onPressed: () => _showDeleteAccountDialog(context),
-                      icon: const Icon(Icons.delete_forever, color: Colors.red),
-                      label: const Text('Excluir Conta', style: TextStyle(color: Colors.red)),
-                      style: OutlinedButton.styleFrom(
-                        side: const BorderSide(color: Colors.red),
-                        padding: const EdgeInsets.symmetric(vertical: 16),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 32),
-                ],
-              ),
-            ),
-          ],
-        ),
+            child: Text(confirmText),
+          ),
+        ],
       ),
     );
   }
 
-  // Card de estatísticas simples
-  Widget _buildStatCard(String title, String value, IconData icon, Color color) {
+  void _snack(String msg, {bool success = false}) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(msg), backgroundColor: success ? Colors.green : Colors.red),
+    );
+  }
+
+  void _goOrToast({required String? routeName, required String fallbackMsg}) {
+    if (routeName == null || routeName.isEmpty) {
+      _snack(fallbackMsg);
+      return;
+    }
+    Navigator.pushNamed(context, routeName);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    // Sem usuário (ex.: retorno da navegação), evita construir a tela
+    if (_auth.currentUser == null) {
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    }
+
+    return StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
+      stream: _userStream(),
+      builder: (context, snap) {
+        if (snap.connectionState == ConnectionState.waiting) {
+          return const Scaffold(body: Center(child: CircularProgressIndicator()));
+        }
+        if (snap.hasError) {
+          return Scaffold(
+            appBar: _appBar(),
+            body: Center(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(Icons.error_outline, color: Colors.red),
+                  const SizedBox(height: 8),
+                  Text('Erro ao carregar perfil: ${snap.error}'),
+                  const SizedBox(height: 12),
+                  FilledButton(onPressed: _refresh, child: const Text('Tentar novamente')),
+                ],
+              ),
+            ),
+          );
+        }
+
+        _userData = snap.data?.data() ?? {};
+        final name = (_userData?['name'] as String?)?.trim();
+        final email = _auth.currentUser?.email ?? _userData?['email'] ?? '';
+        final photoUrl = _pendingAvatar != null
+            ? (_pendingAvatar!.path) // preview local (apenas ícone de foto será mostrado)
+            : (_userData?['photoUrl'] as String?);
+        _userType = (_userData?['userType'] as String?)?.toLowerCase().trim() ?? 'cliente';
+
+        return Scaffold(
+          appBar: _appBar(),
+          body: RefreshIndicator(
+            onRefresh: _refresh,
+            child: SingleChildScrollView(
+              physics: const AlwaysScrollableScrollPhysics(),
+              child: Column(
+                children: [
+                  // Cabeçalho
+                  _header(
+                    name: name ?? _auth.currentUser?.displayName ?? 'Usuário',
+                    email: email,
+                    photoUrl: photoUrl,
+                    onChangePhoto: _pickAvatar,
+                  ),
+
+                  // Estatísticas/resumo (exemplo simples)
+                  Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Row(
+                      children: [
+                        _stat('Serviços', (_userData?['servicesCount'] ?? 0).toString(),
+                            Icons.cleaning_services, Colors.blue),
+                        const SizedBox(width: 12),
+                        _stat('Avaliação',
+                            ((_userData?['rating'] ?? 0.0) as num).toStringAsFixed(1), Icons.star, Colors.amber),
+                        const SizedBox(width: 12),
+                        _stat('Gastos', 'R\$ ${(_userData?['spent'] ?? 0).toString()}', Icons.savings, Colors.green),
+                      ],
+                    ),
+                  ),
+
+                  // Seções
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    child: Column(
+                      children: [
+                        _section('Conta', [
+                          _item(Icons.person, 'Editar perfil', () => _showEditNameSheet(name ?? '')),
+                          _item(Icons.security, 'Segurança', () {
+                            _goOrToast(
+                              routeName: AppRoutes.accountSecurity, // defina no seu RouteGenerator
+                              fallbackMsg: 'Tela de segurança não configurada.',
+                            );
+                          }),
+                          _item(Icons.payment, 'Métodos de pagamento', () {
+                            _goOrToast(
+                              routeName: AppRoutes.paymentMethods,
+                              fallbackMsg: 'Tela de métodos de pagamento não configurada.',
+                            );
+                          }),
+                          _item(Icons.location_on, 'Endereços salvos', () {
+                            _goOrToast(
+                              routeName: AppRoutes.savedAddresses,
+                              fallbackMsg: 'Tela de endereços não configurada.',
+                            );
+                          }),
+                        ]),
+
+                        const SizedBox(height: 16),
+
+                        // Área do Profissional
+                        if (_userType == 'profissional')
+                          _section('Área do Profissional', [
+                            _item(Icons.account_balance_wallet, 'Meus ganhos', () {
+                              _goOrToast(
+                                routeName: AppRoutes.earnings, // crie esta rota (ou use a sua)
+                                fallbackMsg: 'Tela de ganhos não configurada.',
+                              );
+                            }),
+                            _item(Icons.work_outline, 'Meus trabalhos', () {
+                              _goOrToast(
+                                routeName: AppRoutes.professionalJobs,
+                                fallbackMsg: 'Tela de trabalhos não configurada.',
+                              );
+                            }),
+                            _item(Icons.schedule, 'Disponibilidade', () {
+                              _goOrToast(
+                                routeName: AppRoutes.availability,
+                                fallbackMsg: 'Tela de disponibilidade não configurada.',
+                              );
+                            }),
+                          ]),
+
+                        const SizedBox(height: 16),
+
+                        _section('Preferências', [
+                          _item(Icons.notifications, 'Notificações', () {
+                            _goOrToast(
+                              routeName: AppRoutes.notificationsSettings,
+                              fallbackMsg: 'Tela de notificações não configurada.',
+                            );
+                          }),
+                          _item(Icons.language, 'Idioma', () {
+                            _goOrToast(
+                              routeName: AppRoutes.language,
+                              fallbackMsg: 'Tela de idioma não configurada.',
+                            );
+                          }),
+                          _item(Icons.dark_mode, 'Tema', () {
+                            _goOrToast(
+                              routeName: AppRoutes.theme,
+                              fallbackMsg: 'Tela de tema não configurada.',
+                            );
+                          }),
+                        ]),
+
+                        const SizedBox(height: 16),
+
+                        // Administração
+                        if (_userType == 'admin')
+                          _section('Administração', [
+                            _item(Icons.analytics, 'Estatísticas da plataforma', () {
+                              _goOrToast(
+                                routeName: AppRoutes.platformStats,
+                                fallbackMsg: 'Tela de estatísticas não configurada.',
+                              );
+                            }),
+                            _item(Icons.account_balance, 'Gerenciar comissões', () {
+                              _goOrToast(
+                                routeName: AppRoutes.manageCommissions,
+                                fallbackMsg: 'Tela de comissões não configurada.',
+                              );
+                            }),
+                          ]),
+
+                        const SizedBox(height: 16),
+
+                        _section('Suporte', [
+                          _item(Icons.help, 'Central de ajuda', () {
+                            _goOrToast(
+                              routeName: AppRoutes.helpCenter,
+                              fallbackMsg: 'Tela de ajuda não configurada.',
+                            );
+                          }),
+                          _item(Icons.chat, 'Fale conosco', () {
+                            _goOrToast(
+                              routeName: AppRoutes.contactUs,
+                              fallbackMsg: 'Tela de contato não configurada.',
+                            );
+                          }),
+                          _item(Icons.star_rate, 'Avaliar app', () {
+                            _goOrToast(
+                              routeName: AppRoutes.rateApp,
+                              fallbackMsg: 'Ação de avaliar app não configurada.',
+                            );
+                          }),
+                          _item(Icons.share, 'Indicar amigos', () {
+                            _goOrToast(
+                              routeName: AppRoutes.inviteFriends,
+                              fallbackMsg: 'Ação de indicação não configurada.',
+                            );
+                          }),
+                        ]),
+
+                        const SizedBox(height: 16),
+
+                        _section('Legal', [
+                          _item(Icons.description, 'Termos de uso', () {
+                            _goOrToast(
+                              routeName: AppRoutes.terms,
+                              fallbackMsg: 'Tela de termos não configurada.',
+                            );
+                          }),
+                          _item(Icons.privacy_tip, 'Política de privacidade', () {
+                            _goOrToast(
+                              routeName: AppRoutes.privacy,
+                              fallbackMsg: 'Tela de privacidade não configurada.',
+                            );
+                          }),
+                          _item(Icons.info, 'Sobre o app', () {
+                            _goOrToast(
+                              routeName: AppRoutes.about,
+                              fallbackMsg: 'Tela sobre o app não configurada.',
+                            );
+                          }),
+                        ]),
+
+                        const SizedBox(height: 24),
+
+                        // Logout
+                        SizedBox(
+                          width: double.infinity,
+                          child: OutlinedButton.icon(
+                            onPressed: _saving ? null : () async {
+                              final ok = await _confirm(
+                                title: 'Sair da conta',
+                                message: 'Deseja encerrar sua sessão?',
+                                confirmText: 'Sair',
+                              );
+                              if (ok == true) _logout();
+                            },
+                            icon: const Icon(Icons.logout, color: Colors.red),
+                            label: const Text('Sair da conta', style: TextStyle(color: Colors.red)),
+                            style: OutlinedButton.styleFrom(
+                              side: const BorderSide(color: Colors.red),
+                              padding: const EdgeInsets.symmetric(vertical: 14),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+
+                        // Excluir conta
+                        SizedBox(
+                          width: double.infinity,
+                          child: OutlinedButton.icon(
+                            onPressed: _saving ? null : _deleteAccount,
+                            icon: const Icon(Icons.delete_forever, color: Colors.red),
+                            label: const Text('Excluir conta', style: TextStyle(color: Colors.red)),
+                            style: OutlinedButton.styleFrom(
+                              side: const BorderSide(color: Colors.red),
+                              padding: const EdgeInsets.symmetric(vertical: 14),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 28),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          floatingActionButton: _saving
+              ? FloatingActionButton.extended(
+                  onPressed: () {},
+                  label: const Text('Salvando...'),
+                  icon: const SizedBox(
+                    height: 18,
+                    width: 18,
+                    child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                  ),
+                )
+              : null,
+        );
+      },
+    );
+  }
+
+  PreferredSizeWidget _appBar() {
+    return AppBar(
+      title: const Text('Meu Perfil'),
+      backgroundColor: Colors.teal,
+      foregroundColor: Colors.white,
+    );
+  }
+
+  Widget _header({
+    required String name,
+    required String email,
+    required String? photoUrl,
+    required VoidCallback onChangePhoto,
+  }) {
+    final hasLocalPending = _pendingAvatar != null && File(_pendingAvatar!.path).existsSync();
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [Colors.teal, Colors.teal.shade300],
+        ),
+      ),
+      child: Column(
+        children: [
+          Stack(
+            children: [
+              CircleAvatar(
+                radius: 50,
+                backgroundColor: Colors.white,
+                backgroundImage: hasLocalPending
+                    ? FileImage(File(_pendingAvatar!.path))
+                    : (photoUrl != null && photoUrl.isNotEmpty
+                        ? NetworkImage(photoUrl)
+                        : const NetworkImage(
+                            'https://ui-avatars.com/api/?name=User&background=0D8ABC&color=fff')) as ImageProvider,
+              ),
+              Positioned(
+                bottom: 0,
+                right: 0,
+                child: InkWell(
+                  onTap: _saving ? null : onChangePhoto,
+                  child: Container(
+                    decoration: const BoxDecoration(color: Colors.white, shape: BoxShape.circle),
+                    padding: const EdgeInsets.all(6),
+                    child: const Icon(Icons.edit, size: 18, color: Colors.teal),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          Text(
+            name,
+            style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.white),
+          ),
+          const SizedBox(height: 4),
+          Text(email, style: const TextStyle(fontSize: 14, color: Colors.white70)),
+          const SizedBox(height: 8),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+            decoration: BoxDecoration(color: Colors.white.withOpacity(0.2), borderRadius: BorderRadius.circular(20)),
+            child: Text(
+              _userType == 'profissional'
+                  ? 'Conta Profissional'
+                  : _userType == 'admin'
+                      ? 'Administrador'
+                      : 'Cliente',
+              style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w500),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _stat(String title, String value, IconData icon, Color color) {
     return Expanded(
       child: Container(
         margin: const EdgeInsets.symmetric(horizontal: 2),
@@ -255,17 +561,12 @@ class ProfileScreen extends StatelessWidget {
           color: Colors.white,
           borderRadius: BorderRadius.circular(12),
           boxShadow: [
-            BoxShadow(
-              color: Colors.grey.withOpacity(0.07),
-              spreadRadius: 1,
-              blurRadius: 4,
-              offset: const Offset(0, 2),
-            ),
+            BoxShadow(color: Colors.grey.withOpacity(0.07), spreadRadius: 1, blurRadius: 4, offset: const Offset(0, 2)),
           ],
         ),
         child: Column(
           children: [
-            Icon(icon, color: color, size: 24),
+            Icon(icon, color: color, size: 20),
             const SizedBox(height: 6),
             Text(value, style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: color)),
             const SizedBox(height: 2),
@@ -276,31 +577,20 @@ class ProfileScreen extends StatelessWidget {
     );
   }
 
-  // Seção do menu
-  Widget _buildMenuSection(String title, List<Widget> items) {
+  Widget _section(String title, List<Widget> items) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Padding(
           padding: const EdgeInsets.only(left: 8, bottom: 6),
-          child: Text(
-            title,
-            style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.grey.shade700),
-          ),
+          child: Text(title, style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.grey.shade700)),
         ),
         Container(
           margin: const EdgeInsets.only(bottom: 6),
           decoration: BoxDecoration(
             color: Colors.white,
             borderRadius: BorderRadius.circular(12),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.grey.withOpacity(0.05),
-                spreadRadius: 1,
-                blurRadius: 2,
-                offset: const Offset(0, 1),
-              ),
-            ],
+            boxShadow: [BoxShadow(color: Colors.grey.withOpacity(0.05), spreadRadius: 1, blurRadius: 2, offset: const Offset(0, 1))],
           ),
           child: Column(children: items),
         ),
@@ -308,15 +598,11 @@ class ProfileScreen extends StatelessWidget {
     );
   }
 
-  // Itens do menu
-  Widget _buildMenuItem(IconData icon, String title, VoidCallback onTap) {
+  Widget _item(IconData icon, String title, VoidCallback onTap) {
     return ListTile(
       leading: Container(
         padding: const EdgeInsets.all(8),
-        decoration: BoxDecoration(
-          color: Colors.teal.withOpacity(0.1),
-          borderRadius: BorderRadius.circular(8),
-        ),
+        decoration: BoxDecoration(color: Colors.teal.withOpacity(0.1), borderRadius: BorderRadius.circular(8)),
         child: Icon(icon, color: Colors.teal, size: 20),
       ),
       title: Text(title, style: const TextStyle(fontWeight: FontWeight.w500)),
@@ -325,79 +611,45 @@ class ProfileScreen extends StatelessWidget {
     );
   }
 
-  // Diálogo de logout
-  void _showLogoutDialog(BuildContext context) {
-    showDialog(
+  void _showEditNameSheet(String currentName) {
+    final controller = TextEditingController(text: currentName);
+    showModalBottomSheet(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Sair da Conta'),
-        content: const Text('Tem certeza que deseja sair da sua conta?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancelar'),
+      isScrollControlled: true,
+      showDragHandle: true,
+      builder: (ctx) {
+        return Padding(
+          padding: EdgeInsets.only(
+            left: 16,
+            right: 16,
+            bottom: MediaQuery.of(ctx).viewInsets.bottom + 16,
+            top: 12,
           ),
-          ElevatedButton(
-            onPressed: () {
-              Navigator.pop(context);
-              // Faça seu logout real aqui, depois:
-              Navigator.pushNamedAndRemoveUntil(
-                context,
-                AppRoutes.splash,
-                (route) => false,
-              );
-            },
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-            child: const Text('Sair', style: TextStyle(color: Colors.white)),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text('Editar nome', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+              const SizedBox(height: 12),
+              TextField(
+                controller: controller,
+                textInputAction: TextInputAction.done,
+                decoration: const InputDecoration(labelText: 'Nome completo'),
+                onSubmitted: (_) => _saveProfile(name: controller.text),
+              ),
+              const SizedBox(height: 12),
+              SizedBox(
+                width: double.infinity,
+                child: FilledButton.icon(
+                  onPressed: _saving ? null : () => _saveProfile(name: controller.text),
+                  icon: const Icon(Icons.check),
+                  label: const Text('Salvar'),
+                ),
+              ),
+              const SizedBox(height: 12),
+            ],
           ),
-        ],
-      ),
-    );
-  }
-
-  // Diálogo de exclusão de conta
-  void _showDeleteAccountDialog(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Excluir Conta'),
-        content: const Text('Tem certeza que deseja excluir sua conta? Essa ação é irreversível e todos os seus dados serão apagados!'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancelar'),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-            onPressed: () async {
-              Navigator.pop(context);
-              final scaffold = ScaffoldMessenger.of(context);
-              try {
-                await AuthService().deleteAccount();
-                scaffold.showSnackBar(
-                  const SnackBar(
-                    content: Text('Conta excluída com sucesso.'),
-                    backgroundColor: Colors.green,
-                  ),
-                );
-                Navigator.pushNamedAndRemoveUntil(
-                  context,
-                  AppRoutes.splash,
-                  (route) => false,
-                );
-              } catch (e) {
-                scaffold.showSnackBar(
-                  SnackBar(
-                    content: Text('Erro ao excluir conta: $e'),
-                    backgroundColor: Colors.red,
-                  ),
-                );
-              }
-            },
-            child: const Text('Excluir', style: TextStyle(color: Colors.white)),
-          ),
-        ],
-      ),
+        );
+      },
     );
   }
 }

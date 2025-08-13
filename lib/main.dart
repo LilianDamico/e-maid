@@ -1,47 +1,33 @@
 import 'package:flutter/material.dart';
-import 'package:firebase_core/firebase_core.dart';
-import 'package:provider/provider.dart';
-import 'firebase_options.dart';
-import 'routes/route_generator.dart';
 import 'routes/app_routes.dart';
-import 'services/auth_service.dart';
-import 'services/firestore_service.dart';
+import 'screens/splash_screen.dart';
 
-void main() async {
+void main() {
   WidgetsFlutterBinding.ensureInitialized();
-  
-  // Initialize Firebase
-  await Firebase.initializeApp(
-    options: DefaultFirebaseOptions.currentPlatform,
-  );
-  
-  runApp(const MaidApp());
+  runApp(const EmaidApp());
 }
 
-class MaidApp extends StatelessWidget {
-  const MaidApp({super.key});
+class EmaidApp extends StatelessWidget {
+  const EmaidApp({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return MultiProvider(
-      providers: [
-        Provider<AuthService>(
-          create: (_) => AuthService(),
-        ),
-        Provider<FirestoreService>(
-          create: (_) => FirestoreService(),
-        ),
-      ],
-      child: MaterialApp(
-        title: 'E-Maid',
-        theme: ThemeData(
-          colorScheme: ColorScheme.fromSeed(seedColor: Colors.teal),
-          useMaterial3: true,
-        ),
-        initialRoute: AppRoutes.splash,
-        onGenerateRoute: RouteGenerator.generateRoute,
-        debugShowCheckedModeBanner: false,
+    return MaterialApp(
+      title: 'E-Maid',
+      debugShowCheckedModeBanner: false,
+      theme: ThemeData(
+        colorSchemeSeed: Colors.teal,
+        useMaterial3: true,
+        fontFamily: 'Quicksand',
       ),
+      // rota inicial
+      initialRoute: AppRoutes.splash,
+      routes: {
+        AppRoutes.splash: (_) => const SplashScreen(),
+        AppRoutes.login: (_) => const Placeholder(), // troque pela sua tela
+        AppRoutes.home: (_) => const Placeholder(),  // troque pela sua tela
+        // …demais rotas
+      },
     );
   }
 }
