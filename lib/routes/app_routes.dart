@@ -1,5 +1,5 @@
 class AppRoutes {
-  static const splash = '/';
+  static const splash = '/splash';
   static const login = '/login';
   static const home = '/home';
   // ↓ adicionadas
@@ -26,4 +26,24 @@ class AppRoutes {
   static const terms = '/terms';
   static const privacy = '/privacy';
   static const about = '/about';
+
+
+  // autenticação
+  static const register              = '/register';
+  static const professionalRegister  = '/professional-register';
+
+  // serviços / profissionais
+  static const services      = '/services';
+  static const professionals = '/professionals';
+
+  // pagamentos (se já estiver usando)
+  static const paymentMethod   = '/payment-method';
+  static const paymentWebview  = '/payment-webview';
+  static const pixPayment      = '/pix-payment';
+
+  // perfil (se usar)
+  static const profile = '/profile';
+
+  //delete
+  static const deleteAccount = '/delete-account';
 }

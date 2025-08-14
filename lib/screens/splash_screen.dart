@@ -1,7 +1,8 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
-import '../routes/app_routes.dart';
-import '../services/auth_service.dart'; // usa seu AuthService
+import 'package:firebase_auth/firebase_auth.dart';
+
+import '../../routes/app_routes.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -22,30 +23,40 @@ class _SplashScreenState extends State<SplashScreen>
 
     _controller = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 700),
+      duration: const Duration(milliseconds: 650),
     );
-
-    _scale = Tween<double>(begin: 0.92, end: 1.0)
+    _scale = Tween(begin: 0.92, end: 1.0)
         .chain(CurveTween(curve: Curves.easeOutBack))
         .animate(_controller);
-
-    _fade = Tween<double>(begin: 0.0, end: 1.0)
+    _fade = Tween(begin: 0.0, end: 1.0)
         .chain(CurveTween(curve: Curves.easeOut))
         .animate(_controller);
 
     _controller.forward();
 
-    // pequeno delay p/ a animação acontecer
-    Timer(const Duration(milliseconds: 1200), _decideNext);
+    _decideNext();
   }
 
   Future<void> _decideNext() async {
-    final user = AuthService().currentUser; // seu getter
-    if (!mounted) return;
+    try {
+      // Aguarda o primeiro valor da stream (ou timeout de 4s).
+      final user = await FirebaseAuth.instance
+          .authStateChanges()
+          .first
+          .timeout(const Duration(seconds: 4));
 
-    if (user != null) {
-      Navigator.pushReplacementNamed(context, AppRoutes.home);
-    } else {
+      if (!mounted) return;
+      if (user != null) {
+        Navigator.pushReplacementNamed(context, AppRoutes.home);
+      } else {
+        Navigator.pushReplacementNamed(context, AppRoutes.login);
+      }
+    } on TimeoutException {
+      if (!mounted) return;
+      // Se demorar demais (ex.: Web bloqueou cookies / rede lenta), manda pro login.
+      Navigator.pushReplacementNamed(context, AppRoutes.login);
+    } catch (_) {
+      if (!mounted) return;
       Navigator.pushReplacementNamed(context, AppRoutes.login);
     }
   }
@@ -58,7 +69,6 @@ class _SplashScreenState extends State<SplashScreen>
 
   @override
   Widget build(BuildContext context) {
-    // fundo simples; troque por gradient se quiser
     return Scaffold(
       backgroundColor: const Color(0xFFF4F7F7),
       body: Center(
@@ -71,13 +81,11 @@ class _SplashScreenState extends State<SplashScreen>
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  // logo
                   Image.asset('assets/logo.png', width: 160),
-                  const SizedBox(height: 24),
-                  
-                  const SizedBox(height: 12),
+                  const SizedBox(height: 20),
                   const Text(
-                    'Conectando você a profissionais de limpeza\nde forma prática e segura.',
+                    'Conectando você a profissionais de limpeza\n'
+                    'de forma prática e segura.',
                     textAlign: TextAlign.center,
                     style: TextStyle(
                       fontSize: 14.5,
@@ -85,7 +93,7 @@ class _SplashScreenState extends State<SplashScreen>
                       height: 1.25,
                     ),
                   ),
-                  const SizedBox(height: 28),
+                  const SizedBox(height: 22),
                   const SizedBox(
                     width: 28,
                     height: 28,

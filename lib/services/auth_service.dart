@@ -1,7 +1,11 @@
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class AuthService {
+  AuthService._();
+  static final AuthService _instance = AuthService._();
+  factory AuthService() => _instance;
+
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
@@ -11,54 +15,69 @@ class AuthService {
   // Stream de mudanças de autenticação
   Stream<User?> get authStateChanges => _auth.authStateChanges();
 
-  // Login com e-mail e senha
-  Future<UserCredential?> signInWithEmailAndPassword({
+  /// Retorna true se o login atual é com e-mail/senha.
+  bool get isEmailPasswordUser {
+    final u = _auth.currentUser;
+    if (u == null) return false;
+    return u.providerData.any((p) => p.providerId == 'password');
+  }
+
+  /// Reautentica o usuário atual usando e-mail/senha (necessário para exclusão em alguns casos).
+  Future<void> reauthenticateWithPassword(String password) async {
+    final u = _auth.currentUser;
+    if (u == null || u.email == null) {
+      throw 'Nenhum usuário autenticado.';
+    }
+    final cred = EmailAuthProvider.credential(email: u.email!, password: password);
+    await u.reauthenticateWithCredential(cred);
+  }
+
+  /// Login e-mail/senha
+  Future<UserCredential> signInWithEmailAndPassword({
     required String email,
     required String password,
   }) async {
     try {
-      final result = await _auth.signInWithEmailAndPassword(
-        email: email,
+      return await _auth.signInWithEmailAndPassword(
+        email: email.trim(),
         password: password,
       );
-      return result;
     } on FirebaseAuthException catch (e) {
-      throw _handleAuthException(e);
+      throw _mapAuthError(e);
     }
   }
 
-  // Cadastro de usuário comum
-  Future<UserCredential?> registerWithEmailAndPassword({
+  /// Cadastro usuário comum
+  Future<UserCredential> registerWithEmailAndPassword({
     required String email,
     required String password,
     required String name,
     required String phone,
-    required String userType,
+    required String userType, // "cliente" | "profissional"
   }) async {
     try {
-      final result = await _auth.createUserWithEmailAndPassword(
-        email: email,
+      final cred = await _auth.createUserWithEmailAndPassword(
+        email: email.trim(),
         password: password,
       );
 
-      await result.user?.updateDisplayName(name);
-
+      await cred.user?.updateDisplayName(name);
       await _createUserDocument(
-        uid: result.user!.uid,
-        email: email,
+        uid: cred.user!.uid,
+        email: email.trim(),
         name: name,
         phone: phone,
         userType: userType,
       );
 
-      return result;
+      return cred;
     } on FirebaseAuthException catch (e) {
-      throw _handleAuthException(e);
+      throw _mapAuthError(e);
     }
   }
 
-  // Cadastro de profissional
-  Future<UserCredential?> registerProfessional({
+  /// Cadastro de profissional
+  Future<UserCredential> registerProfessional({
     required String email,
     required String password,
     required String name,
@@ -71,51 +90,62 @@ class AuthService {
     required List<String> specialties,
   }) async {
     try {
-      final result = await _auth.createUserWithEmailAndPassword(
-        email: email,
+      final cred = await _auth.createUserWithEmailAndPassword(
+        email: email.trim(),
         password: password,
       );
 
-      await result.user?.updateDisplayName(name);
+      await cred.user?.updateDisplayName(name);
 
-      await _createProfessionalDocument(
-        uid: result.user!.uid,
-        email: email,
+      // Documento do profissional
+      await _firestore.collection('professionals').doc(cred.user!.uid).set({
+        'uid': cred.user!.uid,
+        'email': email.trim(),
+        'name': name,
+        'phone': phone,
+        'cpf': cpf,
+        'address': address,
+        'experience': experience,
+        'pricePerHour': pricePerHour,
+        'description': description,
+        'specialties': specialties,
+        'rating': 0.0,
+        'totalRatings': 0,
+        'isActive': true,
+        'isVerified': false,
+        'profileImageUrl': '',
+        'createdAt': FieldValue.serverTimestamp(),
+        'updatedAt': FieldValue.serverTimestamp(),
+      });
+
+      // Também cria em users
+      await _createUserDocument(
+        uid: cred.user!.uid,
+        email: email.trim(),
         name: name,
         phone: phone,
-        cpf: cpf,
-        address: address,
-        experience: experience,
-        pricePerHour: pricePerHour,
-        description: description,
-        specialties: specialties,
+        userType: 'profissional',
       );
 
-      return result;
+      return cred;
     } on FirebaseAuthException catch (e) {
-      throw _handleAuthException(e);
+      throw _mapAuthError(e);
     }
   }
 
-  // Logout
   Future<void> signOut() async {
-    try {
-      await _auth.signOut();
-    } catch (e) {
-      throw 'Erro ao fazer logout: $e';
-    }
+    await _auth.signOut();
   }
 
-  // Resetar senha
   Future<void> resetPassword(String email) async {
     try {
-      await _auth.sendPasswordResetEmail(email: email);
+      await _auth.sendPasswordResetEmail(email: email.trim());
     } on FirebaseAuthException catch (e) {
-      throw _handleAuthException(e);
+      throw _mapAuthError(e);
     }
   }
 
-  // Criar documento de usuário no Firestore
+  // Firestore helpers
   Future<void> _createUserDocument({
     required String uid,
     required String email,
@@ -134,102 +164,45 @@ class AuthService {
     });
   }
 
-  // Criar documento de profissional no Firestore
-  Future<void> _createProfessionalDocument({
-    required String uid,
-    required String email,
-    required String name,
-    required String phone,
-    required String cpf,
-    required String address,
-    required int experience,
-    required double pricePerHour,
-    required String description,
-    required List<String> specialties,
-  }) async {
-    await _firestore.collection('professionals').doc(uid).set({
-      'uid': uid,
-      'email': email,
-      'name': name,
-      'phone': phone,
-      'cpf': cpf,
-      'address': address,
-      'experience': experience,
-      'pricePerHour': pricePerHour,
-      'description': description,
-      'specialties': specialties,
-      'rating': 0.0,
-      'totalRatings': 0,
-      'isActive': true,
-      'isVerified': false,
-      'profileImageUrl': '',
-      'createdAt': FieldValue.serverTimestamp(),
-      'updatedAt': FieldValue.serverTimestamp(),
-    });
-
-    // Também cria na coleção de usuários
-    await _createUserDocument(
-      uid: uid,
-      email: email,
-      name: name,
-      phone: phone,
-      userType: 'profissional',
-    );
-  }
-
-  // Buscar dados do usuário
   Future<Map<String, dynamic>?> getUserData(String uid) async {
-    try {
-      final doc = await _firestore.collection('users').doc(uid).get();
-      return doc.data() as Map<String, dynamic>?;
-    } catch (e) {
-      throw 'Erro ao buscar dados do usuário: $e';
-    }
+    final doc = await _firestore.collection('users').doc(uid).get();
+    return doc.data();
   }
 
-  // Buscar dados do profissional
   Future<Map<String, dynamic>?> getProfessionalData(String uid) async {
-    try {
-      final doc = await _firestore.collection('professionals').doc(uid).get();
-      return doc.data() as Map<String, dynamic>?;
-    } catch (e) {
-      throw 'Erro ao buscar dados do profissional: $e';
-    }
+    final doc = await _firestore.collection('professionals').doc(uid).get();
+    return doc.data();
   }
 
-  // Exclusão de conta pelo usuário
+  /// Exclusão **do próprio usuário** (Auth + dados básicos no Firestore).
+  /// Lança o sentinela 'requires-recent-login' quando o Firebase exigir reautenticação.
   Future<void> deleteAccount() async {
     final user = _auth.currentUser;
     if (user == null) throw 'Nenhum usuário autenticado.';
 
-    // Remove dados do Firestore (ignorando se algum dos docs não existir)
-    try {
-      await _firestore.collection('users').doc(user.uid).delete();
-    } catch (_) {}
-    try {
-      await _firestore.collection('professionals').doc(user.uid).delete();
-    } catch (_) {}
+    // Remove dados básicos — ignore se não existir
+    try { await _firestore.collection('users').doc(user.uid).delete(); } catch (_) {}
+    try { await _firestore.collection('professionals').doc(user.uid).delete(); } catch (_) {}
 
-    // Exclui conta do Firebase Auth
     try {
       await user.delete();
     } on FirebaseAuthException catch (e) {
       if (e.code == 'requires-recent-login') {
-        throw 'Reautentique-se para excluir a conta.';
+        // Deixe a UI decidir (pedir senha para reautenticar, ou orientar relogar no provedor)
+        throw 'requires-recent-login';
       }
-      throw _handleAuthException(e);
+      throw _mapAuthError(e);
     }
   }
 
-  // Tratamento de erros do Firebase Auth
-  String _handleAuthException(FirebaseAuthException e) {
+  String _mapAuthError(FirebaseAuthException e) {
     switch (e.code) {
       case 'user-not-found':
         return 'Usuário não encontrado.';
       case 'wrong-password':
         return 'Senha incorreta.';
       case 'email-already-in-use':
-        return 'Este e-mail já está em uso.';
+        return 'E-mail já está em uso.';
       case 'weak-password':
         return 'A senha é muito fraca.';
       case 'invalid-email':
@@ -241,7 +214,7 @@ class AuthService {
       case 'operation-not-allowed':
         return 'Operação não permitida.';
       default:
-        return 'Erro de autenticação: ${e.message}';
+        return 'Erro de autenticação: ${e.message ?? e.code}';
     }
   }
 }

@@ -1,8 +1,0 @@
-# Arquivo de configuração para assinatura do app
-# Renomeie para key.properties e preencha com suas informações reais
-# NUNCA commite este arquivo com informações reais!
-
-storePassword=SUA_SENHA_DO_KEYSTORE
-keyPassword=SUA_SENHA_DA_CHAVE
-keyAlias=upload
-storeFile=../upload-keystore.jks

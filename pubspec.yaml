@@ -2,7 +2,7 @@ name: e_maid
 description: "E-Maid - Conecte-se com profissionais de limpeza qualificados. Encontre diaristas, faxineiras e serviços de limpeza residencial e comercial de forma rápida e segura."
 publish_to: 'none'
 
-version: 1.0.0+1
+version: 1.0.0+2
 
 environment:
   sdk: ^3.8.1
