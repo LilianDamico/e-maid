@@ -15,24 +15,15 @@ class AuthService {
   // Stream de mudanças de autenticação
   Stream<User?> get authStateChanges => _auth.authStateChanges();
 
-  /// Retorna true se o login atual é com e-mail/senha.
+  // Se o provedor primário é email/senha (útil para UI e reautenticação)
   bool get isEmailPasswordUser {
-    final u = _auth.currentUser;
-    if (u == null) return false;
-    return u.providerData.any((p) => p.providerId == 'password');
+    final user = _auth.currentUser;
+    if (user == null) return false;
+    return user.providerData.any((p) => p.providerId == 'password');
   }
 
-  /// Reautentica o usuário atual usando e-mail/senha (necessário para exclusão em alguns casos).
-  Future<void> reauthenticateWithPassword(String password) async {
-    final u = _auth.currentUser;
-    if (u == null || u.email == null) {
-      throw 'Nenhum usuário autenticado.';
-    }
-    final cred = EmailAuthProvider.credential(email: u.email!, password: password);
-    await u.reauthenticateWithCredential(cred);
-  }
+  /// --- LOGIN / CADASTRO ---
 
-  /// Login e-mail/senha
   Future<UserCredential> signInWithEmailAndPassword({
     required String email,
     required String password,
@@ -47,7 +38,6 @@ class AuthService {
     }
   }
 
-  /// Cadastro usuário comum
   Future<UserCredential> registerWithEmailAndPassword({
     required String email,
     required String password,
@@ -76,7 +66,6 @@ class AuthService {
     }
   }
 
-  /// Cadastro de profissional
   Future<UserCredential> registerProfessional({
     required String email,
     required String password,
@@ -97,7 +86,7 @@ class AuthService {
 
       await cred.user?.updateDisplayName(name);
 
-      // Documento do profissional
+      // Doc do profissional
       await _firestore.collection('professionals').doc(cred.user!.uid).set({
         'uid': cred.user!.uid,
         'email': email.trim(),
@@ -118,7 +107,7 @@ class AuthService {
         'updatedAt': FieldValue.serverTimestamp(),
       });
 
-      // Também cria em users
+      // espelho simplificado em users
       await _createUserDocument(
         uid: cred.user!.uid,
         email: email.trim(),
@@ -145,7 +134,90 @@ class AuthService {
     }
   }
 
-  // Firestore helpers
+  /// --- EXCLUSÃO DE CONTA + DADOS ---
+
+  /// Reautentica usuário de email/senha (chamado pela sua tela quando necessário)
+  Future<void> reauthenticateWithPassword(String password) async {
+    final user = _auth.currentUser;
+    if (user == null) throw 'Nenhum usuário autenticado.';
+    final email = user.email;
+    if (email == null) throw 'Conta não possui e-mail.';
+
+    try {
+      final credential =
+          EmailAuthProvider.credential(email: email, password: password);
+      await user.reauthenticateWithCredential(credential);
+    } on FirebaseAuthException catch (e) {
+      throw _mapAuthError(e);
+    }
+  }
+
+  /// Exclui dados básicos do usuário no Firestore e a conta no Auth.
+  /// Se o Firebase exigir reautenticação, lança 'requires-recent-login'
+  /// (sua tela já trata esse texto).
+  Future<void> deleteAccount() async {
+    final user = _auth.currentUser;
+    if (user == null) throw 'Nenhum usuário autenticado.';
+    final uid = user.uid;
+
+    // 1) Apagar dados do Firestore (coleções principais)
+    await _deleteFirestoreUserData(uid);
+
+    // 2) Excluir a conta no Auth
+    try {
+      await user.delete();
+    } on FirebaseAuthException catch (e) {
+      if (e.code == 'requires-recent-login') {
+        // Sinal claro para a UI pedir reautenticação
+        throw 'requires-recent-login';
+      }
+      throw _mapAuthError(e);
+    }
+  }
+
+  /// Remove os documentos principais do usuário.
+  /// Obs.: se você tiver subcoleções (ex.: bookings, addresses, etc.),
+  /// delete-as aqui também (via batch/paginado).
+  Future<void> _deleteFirestoreUserData(String uid) async {
+    // users/{uid}
+    try {
+      await _firestore.collection('users').doc(uid).delete();
+    } catch (_) {
+      // ignora se não existir
+    }
+
+    // professionals/{uid}
+    try {
+      await _firestore.collection('professionals').doc(uid).delete();
+    } catch (_) {}
+
+    // EXEMPLO para subcoleção paginada (descomente/adapte se precisar):
+    // await _deleteCollectionPaged(
+    //   _firestore.collection('users').doc(uid).collection('addresses'),
+    //   pageSize: 50,
+    // );
+  }
+
+  /// Deleção paginada de uma coleção (para evitar estouro de memória).
+  Future<void> _deleteCollectionPaged(
+    Query collection, {
+    int pageSize = 50,
+  }) async {
+    while (true) {
+      final snap = await collection.limit(pageSize).get();
+      if (snap.docs.isEmpty) break;
+
+      final batch = _firestore.batch();
+      for (final d in snap.docs) {
+        batch.delete(d.reference);
+      }
+      await batch.commit();
+      if (snap.docs.length < pageSize) break;
+    }
+  }
+
+  /// --- HELPERS FIRESTORE ---
+
   Future<void> _createUserDocument({
     required String uid,
     required String email,
@@ -174,26 +246,7 @@ class AuthService {
     return doc.data();
   }
 
-  /// Exclusão **do próprio usuário** (Auth + dados básicos no Firestore).
-  /// Lança o sentinela 'requires-recent-login' quando o Firebase exigir reautenticação.
-  Future<void> deleteAccount() async {
-    final user = _auth.currentUser;
-    if (user == null) throw 'Nenhum usuário autenticado.';
-
-    // Remove dados básicos — ignore se não existir
-    try { await _firestore.collection('users').doc(user.uid).delete(); } catch (_) {}
-    try { await _firestore.collection('professionals').doc(user.uid).delete(); } catch (_) {}
-
-    try {
-      await user.delete();
-    } on FirebaseAuthException catch (e) {
-      if (e.code == 'requires-recent-login') {
-        // Deixe a UI decidir (pedir senha para reautenticar, ou orientar relogar no provedor)
-        throw 'requires-recent-login';
-      }
-      throw _mapAuthError(e);
-    }
-  }
+  /// --- MAPA DE ERROS ---
 
   String _mapAuthError(FirebaseAuthException e) {
     switch (e.code) {
