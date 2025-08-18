@@ -1,79 +1,124 @@
+// lib/routes/route_generator.dart
 import 'package:flutter/material.dart';
+
 import 'app_routes.dart';
+
+// Telas já existentes
+import '../screens/splash_screen.dart';
+import '../screens/auth/login_screen.dart';
+import '../screens/auth/register_screen.dart';
+import '../screens/auth/professional_register_screen.dart';
+import '../screens/home/home_screen.dart';
+import '../screens/profile/profile_screen.dart';
+import '../screens/professionals/professionals_screen.dart';
+import '../screens/professionals/professional_profile_screen.dart';
+import '../screens/booking/booking_screen.dart';
+import '../screens/bookings/bookings_screen.dart';
+import '../screens/payment/payment_method_screen.dart';
+import '../screens/payment/payment_webview_screen.dart';
+import '../screens/payment/pix_payment_screen.dart';
 
 class RouteGenerator {
   static Route<dynamic> generateRoute(RouteSettings settings) {
+    // Dados passados (opcional) via Navigator.pushNamed
+    final args = settings.arguments;
+
     switch (settings.name) {
+      // ─────────────────── Base
       case AppRoutes.splash:
-        // TODO: retorne sua Splash real
-        return _page(const _PlaceholderScreen(title: 'Splash'));
-      // Conta
-      case AppRoutes.accountSecurity:
-        return _page(const _PlaceholderScreen(title: 'Segurança da Conta'));
-      case AppRoutes.paymentMethods:
-        return _page(const _PlaceholderScreen(title: 'Métodos de Pagamento'));
-      case AppRoutes.savedAddresses:
-        return _page(const _PlaceholderScreen(title: 'Endereços Salvos'));
+        return _page(const SplashScreen());
+      case AppRoutes.login:
+        return _page(const LoginScreen());
+      case AppRoutes.home:
+        return _page(const HomeScreen());
 
-      // Profissional
-      case AppRoutes.earnings:
-        return _page(const _PlaceholderScreen(title: 'Meus Ganhos'));
-      case AppRoutes.professionalJobs:
-        return _page(const _PlaceholderScreen(title: 'Meus Trabalhos'));
-      case AppRoutes.availability:
-        return _page(const _PlaceholderScreen(title: 'Disponibilidade'));
+      // ─────────────────── Autenticação
+      case AppRoutes.register:
+        return _page(const RegisterScreen());
+      case AppRoutes.professionalRegister:
+        return _page(const ProfessionalRegisterScreen());
 
-      // Preferências
-      case AppRoutes.notificationsSettings:
-        return _page(const _PlaceholderScreen(title: 'Notificações'));
-      case AppRoutes.language:
-        return _page(const _PlaceholderScreen(title: 'Idioma'));
-      case AppRoutes.theme:
-        return _page(const _PlaceholderScreen(title: 'Tema'));
+      // ─────────────────── Perfil
+      case AppRoutes.profile:
+        return _page(const ProfileScreen());
 
-      // Administração
-      case AppRoutes.platformStats:
-        return _page(const _PlaceholderScreen(title: 'Estatísticas da Plataforma'));
-      case AppRoutes.manageCommissions:
-        return _page(const _PlaceholderScreen(title: 'Gerenciar Comissões'));
+      // ─────────────────── Serviços / Profissionais
+      case AppRoutes.professionals:
+        // Espera-se receber: { 'serviceName': '...' }
+        final serviceName = (args as Map?)?['serviceName'] as String?;
+        return _page(ProfessionalsScreen(serviceName: serviceName ?? ''));
 
-      // Suporte
-      case AppRoutes.helpCenter:
-        return _page(const _PlaceholderScreen(title: 'Central de Ajuda'));
-      case AppRoutes.contactUs:
-        return _page(const _PlaceholderScreen(title: 'Fale Conosco'));
-      case AppRoutes.rateApp:
-        return _page(const _PlaceholderScreen(title: 'Avaliar App'));
-      case AppRoutes.inviteFriends:
-        return _page(const _PlaceholderScreen(title: 'Indicar Amigos'));
+      case AppRoutes.professionalProfile:
+        // Espera-se receber: { 'professional': {...} }
+        final professional = (args as Map?)?['professional'];
+        return _page(ProfessionalProfileScreen(professional: professional));
 
-      // Legal
-      case AppRoutes.terms:
-        return _page(const _PlaceholderScreen(title: 'Termos de Uso'));
-      case AppRoutes.privacy:
-        return _page(const _PlaceholderScreen(title: 'Política de Privacidade'));
-      case AppRoutes.about:
-        return _page(const _PlaceholderScreen(title: 'Sobre o App'));
+      case AppRoutes.booking:
+        // Espera-se: { 'professional': {...}, 'serviceName': '...' }
+        final data = (args as Map?) ?? {};
+        return _page(BookingScreen(
+          professional: data['professional'],
+          serviceName: data['serviceName'],
+        ));
 
+      case AppRoutes.bookings:
+        return _page(const BookingsScreen());
+
+      // ─────────────────── Pagamentos
+      case AppRoutes.paymentMethod:
+        // Espera-se: { bookingData, totalAmount }
+        final data = (args as Map?) ?? {};
+        return _page(PaymentMethodScreen(
+          bookingData: data['bookingData'],
+          totalAmount: (data['totalAmount'] as num?)?.toDouble() ?? 0,
+        ));
+
+      case AppRoutes.paymentWebview:
+        final data = (args as Map?) ?? {};
+        return _page(PaymentWebViewScreen(
+          checkoutUrl: data['checkoutUrl'],
+          bookingData: data['bookingData'],
+        ));
+
+      case AppRoutes.pixPayment:
+        final data = (args as Map?) ?? {};
+        return _page(PixPaymentScreen(
+          pixData: data['pixData'],
+          bookingData: data['bookingData'],
+        ));
+
+      // ─────────────────── fallback
       default:
-        return _page(const _PlaceholderScreen(title: 'Rota não encontrada'));
+        return _page(_PlaceholderScreen(title: 'Rota não encontrada'));
     }
   }
 
+  // Helpers
   static MaterialPageRoute _page(Widget child) =>
       MaterialPageRoute(builder: (_) => child);
 }
 
 class _PlaceholderScreen extends StatelessWidget {
   final String title;
-  const _PlaceholderScreen({super.key, required this.title});
+  const _PlaceholderScreen({required this.title});
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text(title), backgroundColor: Colors.teal, foregroundColor: Colors.white),
-      body: Center(
-        child: Text('Tela "$title" – em breve', style: const TextStyle(fontSize: 18)),
+      appBar: AppBar(
+        title: Text(title),
+        backgroundColor: Colors.teal,
+        foregroundColor: Colors.white,
+      ),
+      body: const Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.construction, size: 60, color: Colors.grey),
+            SizedBox(height: 8),
+            Text('Em desenvolvimento'),
+          ],
+        ),
       ),
     );
   }

@@ -5,15 +5,6 @@ import 'package:flutter/foundation.dart'
     show defaultTargetPlatform, kIsWeb, TargetPlatform;
 
 /// Default [FirebaseOptions] for use with your Firebase apps.
-///
-/// Example:
-/// ```dart
-/// import 'firebase_options.dart';
-/// // ...
-/// await Firebase.initializeApp(
-///   options: DefaultFirebaseOptions.currentPlatform,
-/// );
-/// ```
 class DefaultFirebaseOptions {
   static FirebaseOptions get currentPlatform {
     if (kIsWeb) {
@@ -59,29 +50,29 @@ class DefaultFirebaseOptions {
   );
 
   static const FirebaseOptions ios = FirebaseOptions(
-    apiKey: 'AIzaSyBvOiCC40yIsar3pFm-0bXBZK9T_-a6LkM',
-    appId: '1:847291063847:ios:c8f4d2e1a9b3f5e7d4c2a1',
-    messagingSenderId: '847291063847',
-    projectId: 'e-maid-production',
-    storageBucket: 'e-maid-production.appspot.com',
+    apiKey: 'AIzaSyC8MzY6kMPOuGY0xvb2tsC3v-p545DY2Do',
+    appId: '1:1021594532905:ios:bc1b73245925c5f6e83038',
+    messagingSenderId: '1021594532905',
+    projectId: 'e-maid-app',
+    storageBucket: 'e-maid-app.firebasestorage.app',
     iosBundleId: 'com.emaid.app',
   );
 
   static const FirebaseOptions macos = FirebaseOptions(
-    apiKey: 'AIzaSyBvOiCC40yIsar3pFm-0bXBZK9T_-a6LkM',
-    appId: '1:847291063847:macos:c8f4d2e1a9b3f5e7d4c2a1',
-    messagingSenderId: '847291063847',
-    projectId: 'e-maid-production',
-    storageBucket: 'e-maid-production.appspot.com',
+    apiKey: 'AIzaSyC8MzY6kMPOuGY0xvb2tsC3v-p545DY2Do',
+    appId: '1:1021594532905:macos:bc1b73245925c5f6e83038',
+    messagingSenderId: '1021594532905',
+    projectId: 'e-maid-app',
+    storageBucket: 'e-maid-app.firebasestorage.app',
     iosBundleId: 'com.emaid.app',
   );
 
   static const FirebaseOptions windows = FirebaseOptions(
-    apiKey: 'AIzaSyBvOiCC40yIsar3pFm-0bXBZK9T_-a6LkM',
-    appId: '1:847291063847:windows:c8f4d2e1a9b3f5e7d4c2a1',
-    messagingSenderId: '847291063847',
-    projectId: 'e-maid-production',
-    authDomain: 'e-maid-production.firebaseapp.com',
-    storageBucket: 'e-maid-production.appspot.com',
+    apiKey: 'AIzaSyC8MzY6kMPOuGY0xvb2tsC3v-p545DY2Do',
+    appId: '1:1021594532905:windows:bc1b73245925c5f6e83038',
+    messagingSenderId: '1021594532905',
+    projectId: 'e-maid-app',
+    authDomain: 'e-maid-app.firebaseapp.com',
+    storageBucket: 'e-maid-app.firebasestorage.app',
   );
 }

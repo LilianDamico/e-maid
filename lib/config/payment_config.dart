@@ -1,11 +1,12 @@
 class PaymentConfig {
-  // ATENÇÃO: Em produção, use variáveis de ambiente ou Firebase Remote Config
-  static const String mercadoPagoAccessToken = 'SEU_ACCESS_TOKEN_AQUI';
-  static const String mercadoPagoPublicKey = 'SEU_PUBLIC_KEY_AQUI';
+  // ATENÇÃO: Configure estas variáveis com os valores reais em produção
+  // Recomenda-se usar Firebase Remote Config ou variáveis de ambiente
+  static const String mercadoPagoAccessToken = 'APP_USR-YOUR_ACCESS_TOKEN_HERE';
+  static const String mercadoPagoPublicKey = 'APP_USR-YOUR_PUBLIC_KEY_HERE';
   
-  // URLs de callback
-  static const String successUrl = 'https://emaid.com.br/payment/success';
-  static const String failureUrl = 'https://emaid.com.br/payment/failure';
-  static const String pendingUrl = 'https://emaid.com.br/payment/pending';
-  static const String webhookUrl = 'https://emaid.com.br/webhooks/mercadopago';
+  // URLs de callback padronizadas
+  static const String successUrl = 'https://e-maid-app.web.app/pay/success';
+  static const String failureUrl = 'https://e-maid-app.web.app/pay/failure';
+  static const String pendingUrl = 'https://e-maid-app.web.app/pay/pending';
+  static const String webhookUrl = 'https://e-maid-api.onrender.com/webhooks/mercadopago';
 }

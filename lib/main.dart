@@ -1,15 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:provider/provider.dart';
+
 import 'firebase_options.dart';
-
+import 'services/auth_service.dart';
 import 'routes/app_routes.dart';
-import 'screens/splash_screen.dart';
-import 'screens/auth/login_screen.dart';
-import 'screens/home/home_screen.dart';
+import 'routes/route_generator.dart';
 
-Future<void> main() async {
+void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
   runApp(const EmaidApp());
 }
 
@@ -18,22 +20,18 @@ class EmaidApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'E-Maid',
-      debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        colorSchemeSeed: Colors.teal,
-        useMaterial3: true,
+    return ChangeNotifierProvider<AuthService>(
+      create: (_) => AuthService(),
+      child: MaterialApp(
+        title: 'E-Maid',
+        debugShowCheckedModeBanner: false,
+        theme: ThemeData(
+          colorSchemeSeed: Colors.teal,
+          useMaterial3: true,
+        ),
+        initialRoute: AppRoutes.splash,
+        onGenerateRoute: RouteGenerator.generateRoute,
       ),
-
-      // >>> Escolha apenas um caminho de arranque (initialRoute OU home) <<<
-      initialRoute: AppRoutes.splash,
-
-      routes: {
-        AppRoutes.splash: (_) => const SplashScreen(),
-        AppRoutes.login : (_) => const LoginScreen(),
-        AppRoutes.home  : (_) => const HomeScreen(),
-      },
     );
   }
 }

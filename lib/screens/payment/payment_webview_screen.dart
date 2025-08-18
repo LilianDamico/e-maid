@@ -2,6 +2,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 import '../../config/api_config.dart';
+import '../../config/return_urls.dart';
 
 class PaymentWebViewScreen extends StatefulWidget {
   final String checkoutUrl;              // <— nome que seu código usa

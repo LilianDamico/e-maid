@@ -1,220 +1,128 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
-import '../../routes/app_routes.dart';
-import '../../data/professionals_data.dart';
-import '../../widgets/filter_bottom_sheet.dart';
+
+import 'professional_profile_screen.dart';
 
 class ProfessionalsScreen extends StatelessWidget {
-  final String serviceName;
+  final String serviceName; // ex.: “Limpeza”, “Passar Roupa”, etc.
 
   const ProfessionalsScreen({super.key, required this.serviceName});
 
   @override
   Widget build(BuildContext context) {
-    final professionals = ProfessionalsData.getProfessionals();
+    // Consulta filtrando por serviceName dentro de "services"
+    final professionalsStream = FirebaseFirestore.instance
+        .collection('professionals')
+        .where('services', arrayContains: serviceName)
+        .orderBy('rating', descending: true)
+        .snapshots();
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(serviceName),
+        title: Text('Profissionais de $serviceName'),
         backgroundColor: Colors.teal,
         foregroundColor: Colors.white,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.filter_list),
-            onPressed: () {
-              showModalBottomSheet(
-                context: context,
-                builder: (_) => const FilterBottomSheet(),
-              );
-            },
-          ),
-        ],
       ),
-      body: Column(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(16),
-            color: Colors.grey.shade100,
-            child: Row(
-              children: [
-                const Icon(Icons.info_outline, color: Colors.teal),
-                const SizedBox(width: 8),
-                Text(
-                  '${professionals.length} profissionais encontrados',
-                  style: const TextStyle(fontWeight: FontWeight.w500),
-                ),
-              ],
-            ),
-          ),
-          Expanded(
-            child: ListView.builder(
-              padding: const EdgeInsets.all(16),
-              itemCount: professionals.length,
-              itemBuilder: (context, index) {
-                final professional = professionals[index];
-                return Card(
-                  margin: const EdgeInsets.only(bottom: 16),
-                  child: Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            CircleAvatar(
-                              radius: 30,
-                              backgroundImage: NetworkImage(professional['photo']),
-                            ),
-                            const SizedBox(width: 16),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Row(
-                                    children: [
-                                      Text(
-                                        professional['name'],
-                                        style: const TextStyle(
-                                          fontSize: 18,
-                                          fontWeight: FontWeight.bold,
-                                        ),
-                                      ),
-                                      if (professional['verified'])
-                                        const Padding(
-                                          padding: EdgeInsets.only(left: 8),
-                                          child: Icon(
-                                            Icons.verified,
-                                            color: Colors.blue,
-                                            size: 20,
-                                          ),
-                                        ),
-                                    ],
-                                  ),
-                                  const SizedBox(height: 4),
-                                  Row(
-                                    children: [
-                                      const Icon(Icons.star, color: Colors.amber, size: 16),
-                                      Text(
-                                        ' ${professional['rating']} (${professional['reviews']} avaliações)',
-                                        style: const TextStyle(fontSize: 14),
-                                      ),
-                                    ],
-                                  ),
-                                  const SizedBox(height: 4),
-                                  Text(
-                                    '${professional['distance']} • ${professional['experience']} anos de experiência',
-                                    style: TextStyle(
-                                      fontSize: 14,
-                                      color: Colors.grey.shade600,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                            Column(
-                              crossAxisAlignment: CrossAxisAlignment.end,
+      body: StreamBuilder<QuerySnapshot>(
+        stream: professionalsStream,
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator());
+          }
+          if (snapshot.hasError) {
+            return Center(
+              child: Text('Erro ao carregar profissionais: ${snapshot.error}'),
+            );
+          }
+          final docs = snapshot.data!.docs;
+          if (docs.isEmpty) {
+            return const Center(child: Text('Nenhum profissional encontrado.'));
+          }
+
+          return ListView.builder(
+            itemCount: docs.length,
+            itemBuilder: (context, index) {
+              final data = docs[index].data() as Map<String, dynamic>;
+
+              final id = data['id'] as String;
+              final name = data['name'] ?? '';
+              final photo = data['photo'] ?? '';
+              final rating = (data['rating'] as num?)?.toDouble() ?? 0.0;
+              final reviews = (data['reviews'] ?? 0).toString();
+              final price = data['price']?.toString() ?? '0';
+
+              return Card(
+                margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                child: Padding(
+                  padding: const EdgeInsets.all(12),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          CircleAvatar(
+                            radius: 30,
+                            backgroundImage: NetworkImage(photo),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(
-                                  'R\$ ${professional['price']}/h',
+                                  name,
                                   style: const TextStyle(
-                                    fontSize: 18,
-                                    fontWeight: FontWeight.bold,
-                                    color: Colors.teal,
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w600,
                                   ),
                                 ),
-                                const SizedBox(height: 4),
-                                Container(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 8,
-                                    vertical: 4,
-                                  ),
-                                  decoration: BoxDecoration(
-                                    color: professional['available']
-                                        ? Colors.green.shade100
-                                        : Colors.red.shade100,
-                                    borderRadius: BorderRadius.circular(12),
-                                  ),
-                                  child: Text(
-                                    professional['available'] ? 'Disponível' : 'Ocupado',
-                                    style: TextStyle(
-                                      fontSize: 12,
-                                      color: professional['available']
-                                          ? Colors.green.shade700
-                                          : Colors.red.shade700,
-                                      fontWeight: FontWeight.w500,
+                                Row(
+                                  children: [
+                                    const Icon(
+                                      Icons.star,
+                                      size: 16,
+                                      color: Colors.amber,
                                     ),
-                                  ),
+                                    const SizedBox(width: 4),
+                                    Text('$rating ($reviews avaliações)'),
+                                  ],
                                 ),
                               ],
                             ),
-                          ],
-                        ),
-                        const SizedBox(height: 12),
-                        Text(
-                          professional['description'],
-                          style: TextStyle(
-                            fontSize: 14,
-                            color: Colors.grey.shade700,
                           ),
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                        const SizedBox(height: 16),
-                        Row(
-                          children: [
-                            Expanded(
-                              child: OutlinedButton(
-                                onPressed: () {
-                                  Navigator.pushNamed(
-                                    context,
-                                    AppRoutes.professionalProfile,
-                                    arguments: {
-                                      'professional': professional,
-                                    },
-                                  );
-                                },
-                                style: OutlinedButton.styleFrom(
-                                  side: const BorderSide(color: Colors.teal),
-                                ),
-                                child: const Text(
-                                  'Ver Perfil',
-                                  style: TextStyle(color: Colors.teal),
+                          Text(
+                            'R\$ $price/h',
+                            style: const TextStyle(
+                              fontWeight: FontWeight.bold,
+                              color: Colors.teal,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      SizedBox(
+                        width: double.infinity,
+                        child: OutlinedButton(
+                          onPressed: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => ProfessionalProfileScreen(
+                                  professional: data..['id'] = id,
                                 ),
                               ),
-                            ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: ElevatedButton(
-                                onPressed: (professional['available'] as bool)
-                                    ? () {
-                                        Navigator.pushNamed(
-                                          context,
-                                          AppRoutes.booking,
-                                          arguments: {
-                                            'professional': professional,
-                                            'serviceName': serviceName,
-                                          },
-                                        );
-                                      }
-                                    : null,
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: Colors.teal,
-                                ),
-                                child: const Text(
-                                  'Contratar',
-                                  style: TextStyle(color: Colors.white),
-                                ),
-                              ),
-                            ),
-                          ],
+                            );
+                          },
+                          child: const Text('Ver Perfil'),
                         ),
-                      ],
-                    ),
+                      ),
+                    ],
                   ),
-                );
-              },
-            ),
-          ),
-        ],
+                ),
+              );
+            },
+          );
+        },
       ),
     );
   }

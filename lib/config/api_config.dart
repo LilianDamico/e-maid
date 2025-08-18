@@ -1,17 +1,13 @@
+// lib/config/api_config.dart
+
 class ApiConfig {
-  // Produção
-  static const baseUrl = 'https://e-maid-api.onrender.com';
+  static const String baseUrl = 'https://e-maid-api.onrender.com/api/mp';
 
-  // Endpoints do seu backend
-  static const createPreference = '$baseUrl/mp/create-preference';
-  static const createPix = '$baseUrl/mp/create-pix';
-  // (opcional) status etc:
-  // static const paymentStatus = '$baseUrl/mp/payment-status';
-}
+  static const String createPreference = '$baseUrl/payments/preference';
+  static const String createPix       = '$baseUrl/payments/pix';
 
-class ReturnUrls {
-  // Esses 3 devem bater com os que você usa ao criar a preferência no backend
-  static const success = 'https://e-maid.app/pay/success';
-  static const failure = 'https://e-maid.app/pay/failure';
-  static const pending = 'https://e-maid.app/pay/pending';
+  // URLs de retorno usadas no WebView (apenas comparação de prefixo)
+  static const String success = 'https://emaid.app/pagamento/sucesso';
+  static const String failure = 'https://emaid.app/pagamento/erro';
+  static const String pending = 'https://emaid.app/pagamento/pendente';
 }
